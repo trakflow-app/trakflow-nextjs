@@ -11,7 +11,6 @@ This is a Next.js (full stack) app designed to help construction teams track too
 - [API Routes](#api-routes)
 - [Storage](#storage)
 - [Useful Commands](#useful-commands)
-- [Frequently Asked Questions](#faq)
 
 ## Getting Started
 
@@ -92,17 +91,6 @@ npm run start
 ```bash
 npm run lint
 ```
-
-## FAQ
-
-Q: Where do I edit the main page?
-A: Edit "page.tsx".
-
-Q: How do I add UI components?
-A: Use the "components" directory. This project uses shadcn/ui and Tailwind CSS.
-
-Q: Where can I find more info about the custom Next.js setup?
-A: See "AGENTS.md" for important conventions and breaking changes.
 
 ## Learn More
 
