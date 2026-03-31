@@ -1,17 +1,20 @@
-import { NextResponse } from "next/server";
-
-import type { OrganizationFormValues, UserRole } from "@/components/profile/types";
+import { NextResponse } from 'next/server';
+import type {
+  OrganizationFormValues,
+  UserRole,
+} from '@/components/profile/types';
 
 const HTTP_STATUS_OK = 200;
 const HTTP_STATUS_BAD_REQUEST = 400;
 const HTTP_STATUS_FORBIDDEN = 403;
 const EMPTY_VALUE_LENGTH = 0;
-const ORGANIZATION_UPDATE_SUCCESS_MESSAGE = "Your organization has been updated.";
+const ORGANIZATION_UPDATE_SUCCESS_MESSAGE =
+  'Your organization has been updated.';
 const FORBIDDEN_ORGANIZATION_UPDATE_MESSAGE =
-  "You do not have permission to edit the organization.";
+  'You do not have permission to edit the organization.';
 const INVALID_ORGANIZATION_PAYLOAD_MESSAGE =
-  "Please complete the organization name before saving.";
-const EDITABLE_ORGANIZATION_ROLES: UserRole[] = ["admin", "foreman"];
+  'Please complete the organization name before saving.';
+const EDITABLE_ORGANIZATION_ROLES: UserRole[] = ['admin', 'foreman'];
 
 /**
  * Organization update payload expected by the backend route.
@@ -26,11 +29,16 @@ interface OrganizationUpdateRequest extends OrganizationFormValues {
 function isOrganizationUpdateRequest(
   value: unknown,
 ): value is OrganizationUpdateRequest {
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== 'object') {
     return false;
   }
 
-  return typeof value.name === "string" && typeof value.userRole === "string";
+  const organizationValueRecord = value as Record<string, unknown>;
+
+  return (
+    typeof organizationValueRecord.name === 'string' &&
+    typeof organizationValueRecord.userRole === 'string'
+  );
 }
 
 /**

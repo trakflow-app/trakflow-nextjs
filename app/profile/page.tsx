@@ -1,21 +1,21 @@
-"use client";
-import { PROFILE_PAGE_COPY } from "@/locales/app/profile/en";
-import { ProfileManagement } from "@/components/profile/profile-management";
+'use client';
+import { PROFILE_PAGE_COPY } from '@/locales/app/profile/en';
+import { ProfileManagement } from '@/components/profile/profile-management';
 import type {
   OrganizationFormValues,
   ProfileFormValues,
   UserRole,
-} from "@/components/profile/types";
+} from '@/components/profile/types';
 
 /**
  * This are the endpoints for sending the requests and how to format them
  * TODO: Does this need to be here or in separate file constant/config file
  */
-const PROFILE_API_ENDPOINT = "/api/profile";
-const ORGANIZATION_API_ENDPOINT = "/api/organization";
-const JSON_CONTENT_TYPE = "application/json";
+const PROFILE_API_ENDPOINT = '/api/profile';
+const ORGANIZATION_API_ENDPOINT = '/api/organization';
+const JSON_CONTENT_TYPE = 'application/json';
 // TODO: This is still mocked at the page level until a real auth/session source is wired in.
-const CURRENT_USER_ROLE: UserRole = "foreman";
+const CURRENT_USER_ROLE: UserRole = 'foreman';
 
 /**
  * Saves personal profile updates through the profile API route.
@@ -23,9 +23,9 @@ const CURRENT_USER_ROLE: UserRole = "foreman";
 async function handleProfileSave(values: ProfileFormValues) {
   const profilePageText = PROFILE_PAGE_COPY;
   const response = await fetch(PROFILE_API_ENDPOINT, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": JSON_CONTENT_TYPE,
+      'Content-Type': JSON_CONTENT_TYPE,
     },
     body: JSON.stringify(values),
   });
@@ -47,9 +47,9 @@ async function handleProfileSave(values: ProfileFormValues) {
 async function handleOrganizationSave(values: OrganizationFormValues) {
   const profilePageText = PROFILE_PAGE_COPY;
   const response = await fetch(ORGANIZATION_API_ENDPOINT, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": JSON_CONTENT_TYPE,
+      'Content-Type': JSON_CONTENT_TYPE,
     },
     body: JSON.stringify({
       ...values,
@@ -89,13 +89,13 @@ export default function ProfilePage() {
       <ProfileManagement
         currentUserRole={CURRENT_USER_ROLE}
         initialProfileValues={{
-          name: "Cindy Mae Ngoho",
+          name: 'Cindy Mae Ngoho',
           role: CURRENT_USER_ROLE,
-          avatarUrl: "https://cdn.example.com/cindy-avatar.jpg",
-          emailAddress: "cindy@example.com",
+          avatarUrl: 'https://cdn.example.com/cindy-avatar.jpg',
+          emailAddress: 'cindy@example.com',
         }}
         initialOrganizationValues={{
-          name: "TrakFlow",
+          name: 'TrakFlow',
         }}
         onSaveProfile={handleProfileSave}
         onSaveOrganization={handleOrganizationSave}

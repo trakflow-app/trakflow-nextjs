@@ -1,17 +1,17 @@
-"use client";
-import Image from "next/image";
-import { useId, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+'use client';
+import Image from 'next/image';
+import { useId, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import {
   DEFAULT_ORGANIZATION_VALUES,
   DEFAULT_PROFILE_VALUES,
@@ -23,8 +23,8 @@ import {
   PROFILE_AVATAR_IMAGE_SIZE,
   PROFILE_AVATAR_UPLOAD_INPUT_ID_SUFFIX,
   VALID_EMAIL_PATTERN,
-} from "./constants";
-import { PROFILE_COMPONENT_COPY } from "@/locales/components/profile/en";
+} from './constants';
+import { PROFILE_COMPONENT_COPY } from '@/locales/components/profile/en';
 import type {
   FormValues,
   OrganizationFormValues,
@@ -32,7 +32,7 @@ import type {
   ProfileFormValues,
   ProfileManagementProps,
   UserRole,
-} from "./types";
+} from './types';
 
 type FieldErrors<TValues extends FormValues> = Partial<
   Record<keyof TValues, string>
@@ -47,7 +47,7 @@ interface FormSectionProps<TValues extends FormValues> {
   description: string;
   actionLabel: string;
   actionLoadingLabel: string;
-  state: "idle" | "loading" | "success" | "error";
+  state: 'idle' | 'loading' | 'success' | 'error';
   statusMessage: string;
   values: TValues;
   fields: ProfileFieldConfig<TValues>[];
@@ -80,7 +80,7 @@ function normalizeProfileValues(
   };
   // Ensure all values are strings (no undefined)
   return Object.fromEntries(
-    Object.entries(merged).map(([key, value]) => [key, value ?? ""]),
+    Object.entries(merged).map(([key, value]) => [key, value ?? '']),
   ) as ProfileFormValues;
 }
 
@@ -96,7 +96,7 @@ function normalizeOrganizationValues(
   };
   // Ensure all values are strings (no undefined)
   return Object.fromEntries(
-    Object.entries(merged).map(([key, value]) => [key, value ?? ""]),
+    Object.entries(merged).map(([key, value]) => [key, value ?? '']),
   ) as OrganizationFormValues;
 }
 
@@ -128,7 +128,7 @@ function validateFields<TValues extends FormValues>(
       return;
     }
 
-    if (field.type === "email" && fieldValue.length > 0) {
+    if (field.type === 'email' && fieldValue.length > 0) {
       if (!VALID_EMAIL_PATTERN.test(fieldValue)) {
         errors[field.key] = validationText.invalidEmail;
       }
@@ -143,7 +143,7 @@ function validateFields<TValues extends FormValues>(
  */
 function renderBanner(
   prefix: string,
-  state: "idle" | "loading" | "success" | "error",
+  state: 'idle' | 'loading' | 'success' | 'error',
   message: string,
 ) {
   if (
@@ -217,7 +217,7 @@ function FormSection<TValues extends FormValues>({
                 <label key={fieldKey} className="space-y-1.5">
                   <Label>{field.label}</Label>
                   <Input
-                    type={field.type ?? "text"}
+                    type={field.type ?? 'text'}
                     value={fieldValue}
                     placeholder={field.placeholder}
                     disabled={areInputsDisabled}
@@ -300,21 +300,21 @@ export function ProfileManagement({
     FieldErrors<OrganizationFormValues>
   >({});
   const [profileState, setProfileState] = useState<
-    "idle" | "loading" | "success" | "error"
+    'idle' | 'loading' | 'success' | 'error'
   >(FORM_STATE.idle);
   const [organizationState, setOrganizationState] = useState<
-    "idle" | "loading" | "success" | "error"
+    'idle' | 'loading' | 'success' | 'error'
   >(FORM_STATE.idle);
   // These messages are shown inside the success/error banners.
-  const [profileMessage, setProfileMessage] = useState("");
-  const [organizationMessage, setOrganizationMessage] = useState("");
+  const [profileMessage, setProfileMessage] = useState('');
+  const [organizationMessage, setOrganizationMessage] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
   // Crew members can view organization details, but only admins/foremen can edit them.
-  const canEditOrganization = currentUserRole !== "crew";
+  const canEditOrganization = currentUserRole !== 'crew';
 
   // Merge base layout styles with any extra className from the parent.
   const mergedClassName = useMemo(
-    () => cn("w-full max-w-4xl space-y-6", className),
+    () => cn('w-full max-w-4xl space-y-6', className),
     [className],
   );
 
@@ -335,7 +335,7 @@ export function ProfileManagement({
       profileState === FORM_STATE.success
     ) {
       setProfileState(FORM_STATE.idle);
-      setProfileMessage("");
+      setProfileMessage('');
     }
   };
 
@@ -359,7 +359,7 @@ export function ProfileManagement({
       organizationState === FORM_STATE.success
     ) {
       setOrganizationState(FORM_STATE.idle);
-      setOrganizationMessage("");
+      setOrganizationMessage('');
     }
   };
 
@@ -370,7 +370,7 @@ export function ProfileManagement({
       return;
     }
 
-    if (!selectedFile.type.startsWith("image/")) {
+    if (!selectedFile.type.startsWith('image/')) {
       setProfileState(FORM_STATE.error);
       setProfileMessage(copy.genericErrorDefault);
       return;
@@ -381,7 +381,7 @@ export function ProfileManagement({
     fileReader.onload = () => {
       // Keep the upload flow simple for now by storing a data URL directly in form state.
       const nextAvatarUrl =
-        typeof fileReader.result === "string" ? fileReader.result : "";
+        typeof fileReader.result === 'string' ? fileReader.result : '';
 
       if (nextAvatarUrl.length === EMPTY_VALUE_LENGTH) {
         setProfileState(FORM_STATE.error);
@@ -389,7 +389,7 @@ export function ProfileManagement({
         return;
       }
 
-      handleProfileChange("avatarUrl", nextAvatarUrl);
+      handleProfileChange('avatarUrl', nextAvatarUrl);
     };
 
     fileReader.onerror = () => {
@@ -402,10 +402,10 @@ export function ProfileManagement({
 
   const handleAvatarRemove = () => {
     // Clearing both the form value and the hidden input lets the same file be re-selected.
-    handleProfileChange("avatarUrl", "");
+    handleProfileChange('avatarUrl', '');
 
     if (avatarInputRef.current) {
-      avatarInputRef.current.value = "";
+      avatarInputRef.current.value = '';
     }
   };
 
@@ -429,7 +429,7 @@ export function ProfileManagement({
     }
 
     setProfileState(FORM_STATE.loading);
-    setProfileMessage("");
+    setProfileMessage('');
 
     try {
       const result = await onSaveProfile(profileValues);
@@ -469,7 +469,7 @@ export function ProfileManagement({
     }
 
     setOrganizationState(FORM_STATE.loading);
-    setOrganizationMessage("");
+    setOrganizationMessage('');
 
     try {
       const result = await onSaveOrganization(organizationValues);
@@ -502,7 +502,7 @@ export function ProfileManagement({
             />
           ) : (
             <span className="text-2xl font-semibold text-primary">
-              {profileValues.name.trim().charAt(0).toUpperCase() || "P"}
+              {profileValues.name.trim().charAt(0).toUpperCase() || 'P'}
             </span>
           )}
         </div>
