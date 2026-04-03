@@ -7,11 +7,11 @@ Write them in order and never reorder them after they run.
 
 ## Migration Overview
 
-| File | Purpose |
-|---|---|
-| `20260327000000_initial_schema.sql` | enums, tables, constraints, indexes, helper functions, triggers, RLS |
-| `20260327000001_workflow_functions.sql` | multi-step business workflow functions |
-| `20260327000002_reporting_views.sql` | reporting views |
+| File                                    | Purpose                                                              |
+| --------------------------------------- | -------------------------------------------------------------------- |
+| `20260327000000_initial_schema.sql`     | enums, tables, constraints, indexes, helper functions, triggers, RLS |
+| `20260327000001_workflow_functions.sql` | multi-step business workflow functions                               |
+| `20260327000002_reporting_views.sql`    | reporting views                                                      |
 
 Rule of thumb:
 
@@ -548,18 +548,18 @@ No direct INSERT/UPDATE policies on:
 
 #### Policy intent by table
 
-| Table | SELECT | INSERT | UPDATE | DELETE |
-|---|---|---|---|---|
-| `organizations` | org member | via function only | via function only | - |
-| `accounts` | own row for all, full same-org member visibility for `OWNER` / `FOREMAN` only | via trigger only | via `update_my_profile()` function only | - |
-| `org_invites` | owner/foreman view org invites | via function only | via function only | owner/foreman as needed |
-| `projects` | org members | `can_manage_ops()` | `can_manage_ops()` | `can_manage_ops()` |
-| `tools` | org members | `can_manage_ops()` | `can_manage_ops()` | `can_manage_ops()` |
-| `checkout_sessions` | org members, org-wide visibility for owner/foreman | no direct policy | no direct policy | - |
-| `tool_management` | own rows + org-wide for owner/foreman | no direct policy | no direct policy | - |
-| `materials` | `can_manage_ops()` only | `can_manage_ops()` | `can_manage_ops()` | `can_manage_ops()` |
-| `material_usage` | `can_manage_ops()` only | no direct policy | - | - |
-| `org_tool_counters` | - | trigger only | trigger only | - |
+| Table               | SELECT                                                                        | INSERT             | UPDATE                                  | DELETE                  |
+| ------------------- | ----------------------------------------------------------------------------- | ------------------ | --------------------------------------- | ----------------------- |
+| `organizations`     | org member                                                                    | via function only  | via function only                       | -                       |
+| `accounts`          | own row for all, full same-org member visibility for `OWNER` / `FOREMAN` only | via trigger only   | via `update_my_profile()` function only | -                       |
+| `org_invites`       | owner/foreman view org invites                                                | via function only  | via function only                       | owner/foreman as needed |
+| `projects`          | org members                                                                   | `can_manage_ops()` | `can_manage_ops()`                      | `can_manage_ops()`      |
+| `tools`             | org members                                                                   | `can_manage_ops()` | `can_manage_ops()`                      | `can_manage_ops()`      |
+| `checkout_sessions` | org members, org-wide visibility for owner/foreman                            | no direct policy   | no direct policy                        | -                       |
+| `tool_management`   | own rows + org-wide for owner/foreman                                         | no direct policy   | no direct policy                        | -                       |
+| `materials`         | `can_manage_ops()` only                                                       | `can_manage_ops()` | `can_manage_ops()`                      | `can_manage_ops()`      |
+| `material_usage`    | `can_manage_ops()` only                                                       | no direct policy   | -                                       | -                       |
+| `org_tool_counters` | -                                                                             | trigger only       | trigger only                            | -                       |
 
 For `org_tool_counters`, use an explicit deny-all direct-access policy so the trigger-only intent is visible to security tooling.
 
@@ -759,16 +759,16 @@ Do not include yet, but reserve for later migrations:
 
 These do not belong in SQL migrations:
 
-| Item | Where it belongs |
-|---|---|
-| org-creation allowlist/domain gating | Next.js server layer / env config |
-| storage bucket creation | Supabase dashboard or CLI/config |
-| signed URL generation | `lib/storage/**` |
-| storage cleanup / retention jobs | Edge Function or server cron / scheduled job |
-| auth email templates | Supabase dashboard |
-| seed data | `supabase/seed.sql` |
-| API response DTOs | DAL / route layer |
-| request validation | `lib/validations/**` |
+| Item                                 | Where it belongs                             |
+| ------------------------------------ | -------------------------------------------- |
+| org-creation allowlist/domain gating | Next.js server layer / env config            |
+| storage bucket creation              | Supabase dashboard or CLI/config             |
+| signed URL generation                | `lib/storage/**`                             |
+| storage cleanup / retention jobs     | Edge Function or server cron / scheduled job |
+| auth email templates                 | Supabase dashboard                           |
+| seed data                            | `supabase/seed.sql`                          |
+| API response DTOs                    | DAL / route layer                            |
+| request validation                   | `lib/validations/**`                         |
 
 ---
 
