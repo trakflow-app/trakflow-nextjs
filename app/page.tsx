@@ -1,6 +1,30 @@
+'use client';
 import Image from 'next/image';
+import { useState } from 'react';
+import { ReusableModal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSave = async () => {
+    setIsLoading(true); // 1. Start loading
+
+    try {
+      // 2. Simulate an API call (e.g., waiting 2 seconds)
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // 3. Logic finished, close the modal
+      setIsOpen(false);
+    } catch (error) {
+      console.error('Save failed', error);
+    } finally {
+      // 4. Reset loading state
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
@@ -12,6 +36,30 @@ export default function Home() {
           height={20}
           priority
         />
+
+        <div className="p-8">
+          <Button onClick={() => setIsOpen(true)}>Edit profile</Button>
+          <ReusableModal
+            title="Edit Profile"
+            description="Make changes to your profile here."
+            open={isOpen}
+            onOpenChange={setIsOpen}
+            isLoading={isLoading}
+            footer={
+              <>
+                <Button variant="outline" onClick={() => setIsOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave}>Save Changes</Button>
+              </>
+            }
+          >
+            <div className="space-y-4">
+              <p>This is where your form or custom content goes.</p>
+              {/* Example: <Input placeholder="Name" /> */}
+            </div>
+          </ReusableModal>
+        </div>
 
         <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
           <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
