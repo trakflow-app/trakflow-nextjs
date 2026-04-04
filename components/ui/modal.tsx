@@ -40,11 +40,17 @@ export function ReusableModal({
   footer,
   open,
   onOpenChange,
-  isLoading,
+  isLoading = false,
 }: ReusableModalProps) {
+  // Prevent closing the modal while loading
+  const handleOpenChange = (newOpen: boolean) => {
+    if (isLoading) return; // Block closing when loading
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[425px]" showCloseButton={!isLoading}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
