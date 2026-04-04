@@ -99,6 +99,7 @@ function ToastNotification({
       </ToastPrimitive.Title>
       <ToastPrimitive.Close data-slot="toast-close" asChild>
         <Button
+          type="button"
           variant="ghost"
           size="icon-sm"
           className="absolute top-2 right-1 opacity-60 hover:opacity-100"
