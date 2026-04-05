@@ -40,16 +40,45 @@ The `.env.local` file contains sensitive configuration values that **must never 
 Set the following variables in `.env.local`:
 
 ```bash
-SUPABASE_URL=your-supabase-url
-SUPABASE_ANON_KEY=your-supabase-anon-key
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_PROJECT_ID=your-project-id
+TRAKFLOW_BOOTSTRAP_TEST_PASSWORD=your-shared-test-password
 ```
 
-Get these from your Supabase project dashboard.
+Minimum required to run the app:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Required only for the hosted bootstrap flow:
+
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `TRAKFLOW_BOOTSTRAP_TEST_PASSWORD`
+
+Optional:
+
+- `SUPABASE_PROJECT_ID`
+
+Get the Supabase values from your Supabase project dashboard. Keep the shared
+bootstrap password only in `.env.local`.
 
 ## Connecting to Supabase
 
-- `SUPABASE_URL` should match your Supabase project’s API URL.
-- `SUPABASE_ANON_KEY` is your project’s anon/public key.
+- `NEXT_PUBLIC_SUPABASE_URL` should match your Supabase project’s API URL.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` is your project’s anon/public key.
+- `SUPABASE_SERVICE_ROLE_KEY` is required for the shared hosted dev bootstrap flow.
+- `TRAKFLOW_BOOTSTRAP_TEST_PASSWORD` is the shared password reset onto the seeded test accounts during bootstrap reruns.
+
+## Repo Bootstrap
+
+See `docs/repo-bootstrap.md` for:
+
+- the hosted Supabase workflow for teammates
+- the local Supabase + Docker workflow for migration work
+- the shared hosted bootstrap script and test accounts
+- the local seed strategy
 
 ## API Routes
 
@@ -90,6 +119,12 @@ npm run start
 
 ```bash
 npm run lint
+```
+
+- Bootstrap the shared hosted dev project:
+
+```bash
+npm run db:bootstrap:hosted -- --confirm-hosted-dev
 ```
 
 ## Learn More
