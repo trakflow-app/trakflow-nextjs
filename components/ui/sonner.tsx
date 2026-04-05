@@ -8,7 +8,7 @@ import { Toaster as SonnerToaster } from 'sonner';
  * Mount once in the root layout.
  */
 function Toaster(props: React.ComponentProps<typeof SonnerToaster>) {
-  return <SonnerToaster {...props} />;
+  return <SonnerToaster position="bottom-right" closeButton {...props} />;
 }
 
 export { Toaster };

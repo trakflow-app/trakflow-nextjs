@@ -1,3 +1,5 @@
+'use client';
+
 import { toast } from 'sonner';
 
 const TOAST_DURATION = 5000;
