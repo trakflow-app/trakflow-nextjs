@@ -1,7 +1,17 @@
 'use client';
 import Image from 'next/image';
-
+import React from 'react';
+import { SelectField } from '@/components/select-field';
 export default function Home() {
+  const STATUS_OPTIONS = [
+    { label: 'better', value: 'better' },
+    { label: 'late', value: 'late' },
+    { label: 'than', value: 'than' },
+    { label: 'never', value: 'never' },
+  ];
+
+  const [status, setStatus] = React.useState<string>();
+
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
@@ -60,6 +70,12 @@ export default function Home() {
           >
             Documentation
           </a>
+          <SelectField
+            options={STATUS_OPTIONS}
+            value={status}
+            onChange={setStatus}
+            placeholder="Select an option"
+          />
         </div>
       </main>
     </div>
