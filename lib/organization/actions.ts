@@ -26,7 +26,7 @@ export async function createOrganization(formData: FormData) {
   }
 
   // Call the database workflow function
-  const { data: orgId, error } = await supabase.rpc('create_org', {
+  const { data: error } = await supabase.rpc('create_org', {
     name: orgName.trim(),
   });
 
@@ -75,7 +75,7 @@ export async function joinOrganization(joinCode: string) {
   }
 
   // Call the database workflow function
-  const { data: orgId, error } = await supabase.rpc('join_org_by_code', {
+  const { data: error } = await supabase.rpc('join_org_by_code', {
     code: normalizedCode,
   });
 

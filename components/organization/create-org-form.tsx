@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { createOrganization } from '@/lib/organization/actions';
-import { Building2 } from 'lucide-react';
 
 export default function CreateOrgForm() {
   const [error, setError] = useState<string | null>(null);

@@ -26,7 +26,7 @@ export async function middleware(request: NextRequest) {
   );
 
   // Refresh session to ensure token is valid
-  const { data, error } = await supabase.auth.getSession();
+  const { error } = await supabase.auth.getSession();
 
   if (error) {
     console.error('Session refresh error:', error);
