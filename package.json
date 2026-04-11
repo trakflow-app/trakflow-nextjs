@@ -16,6 +16,8 @@
     "db:bootstrap:hosted": "node scripts/bootstrap-hosted-dev.mjs"
   },
   "dependencies": {
+    "@radix-ui/react-label": "^2.1.8",
+    "@supabase/ssr": "^0.10.2",
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

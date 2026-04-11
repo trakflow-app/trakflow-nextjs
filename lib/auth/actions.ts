@@ -8,9 +8,6 @@ export type ActionState = {
   error?: string;
 } | null;
 
-/**
- * This is the signup logic function
- */
 export async function signup(
   _prevState: ActionState,
   formData: FormData,
@@ -37,9 +34,6 @@ export async function signup(
   redirect('/onboarding');
 }
 
-/**
- * This is the login logic function
- */
 export async function login(
   _prevState: ActionState,
   formData: FormData,
@@ -58,12 +52,9 @@ export async function login(
   }
 
   revalidatePath('/', 'layout');
-  redirect('/onboarding'); // Will route based on org/role status
+  redirect('/onboarding');
 }
 
-/**
- * This is the logout logic function
- */
 export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
@@ -72,9 +63,10 @@ export async function logout() {
 }
 
 /**
- * This is the logic of getting the users profile
+ * Get current user's account (without organization join)
+ * This works even when user hasn't joined an org yet
  */
-export async function getProfile() {
+export async function getAccount() {
   const supabase = await createClient();
 
   const {
@@ -83,11 +75,92 @@ export async function getProfile() {
 
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*, organization:organizations(*)')
+  // Don't join with organizations - RLS blocks it when org_id is null
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('*')
     .eq('id', user.id)
     .single();
 
-  return profile;
+  if (error) {
+    console.error('Error fetching account:', error);
+    return null;
+  }
+
+  return account;
+}
+
+/**
+ * Get account WITH organization details (only works after user has joined)
+ */
+export async function getAccountWithOrg() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: account, error: accountError } = await supabase
+    .from('accounts')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (accountError || !account) {
+    console.error('Error fetching account:', accountError);
+    return null;
+  }
+
+  // If user has no org, return account without org details
+  if (!account.org_id) {
+    return account;
+  }
+
+  // Fetch organization separately
+  const { data: organization, error: orgError } = await supabase
+    .from('organizations')
+    .select('*')
+    .eq('id', account.org_id)
+    .single();
+
+  if (orgError) {
+    console.error('Error fetching organization:', orgError);
+    return account; // Return account even if org fetch fails
+  }
+
+  return {
+    ...account,
+    organization,
+  };
+}
+
+export async function checkUserOrg() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { authenticated: false };
+  }
+
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single();
+
+  // If RLS denies access or account doesn't exist, assume no org yet
+  if (error || !account) {
+    return { authenticated: true, hasOrg: false, role: null };
+  }
+
+  return {
+    authenticated: true,
+    hasOrg: !!account.org_id,
+    role: account.role,
+  };
 }
