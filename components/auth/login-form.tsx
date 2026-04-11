@@ -1,79 +1,82 @@
 'use client';
 
-import { useRouter } from 'next/router';
-import { useState } from 'react';
+import { useActionState, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { loginForm } from '@/locales/components/auth/login-form';
+import { login } from '@/lib/auth/actions';
+import { Eye, EyeOff } from 'lucide-react';
 
 /**
  * Login form for authenticated user
  */
 export default function LoginForm() {
-  /** Error state */
-  const [error, setError] = useState<string | null>(null);
-  /** Loading state */
-  const [loading, setLoading] = useState(false);
-  /** Router */
-  const router = useRouter;
-
-  /**
-   * Handle submission of the login form
+  /** * state: returns the { error: string } from your action
+   * formAction: the optimized function to pass to the form
+   * isPending: replaces your manual 'loading' state automatically
    */
-  async function handleSubmit(formData: FormData) {
-    setLoading(true);
-    setError(null);
+  const [state, formAction, isPending] = useActionState(login, null);
 
-    const result = await login(formData);
-
-    // Guard error
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
-    }
-    // Success case handled by redirect in action
-  }
-
+  // Keep local state only for the password toggle (purely UI)
+  const [showPassword, setShowPassword] = useState(false);
   /**
    * UI form
    */
   return (
-    <form action={handleSubmit} className="space-y-6">
-      {error && (
+    <form action={formAction} className="space-y-6">
+      {/* Displays the error returned by the server action */}
+      {state?.error && (
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-800">
-          {error}
+          {state.error}
         </div>
       )}
 
       <div className="space-y-4">
         <div>
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{loginForm.email.label}</Label>
           <Input
             id="email"
             name="email"
             type="email"
             required
             autoComplete="email"
-            placeholder="you@example.com"
-            disabled={loading}
+            placeholder={loginForm.email.placeholder}
+            disabled={isPending}
           />
         </div>
 
         <div>
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            placeholder="••••••••"
-            disabled={loading}
-          />
+          <Label htmlFor="password">{loginForm.password.label}</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              required
+              autoComplete="current-password"
+              placeholder={loginForm.password.placeholder}
+              disabled={isPending}
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              disabled={isPending}
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Signing in...' : 'Sign in'}
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? loginForm.loading : loginForm.submitButton}
       </Button>
     </form>
   );
