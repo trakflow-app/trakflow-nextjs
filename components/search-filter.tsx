@@ -43,7 +43,12 @@ export function SearchFilter({
   }
 
   return (
-    <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-center', className)}>
+    <div
+      className={cn(
+        'flex flex-col gap-2 sm:flex-row sm:items-center',
+        className,
+      )}
+    >
       <Input
         className="flex-1"
         type="search"
