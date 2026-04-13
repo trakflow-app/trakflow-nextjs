@@ -11,9 +11,17 @@ export default async function OwnerDashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const role = user?.user_metadata?.role;
+  if (!user) {
+    redirect('/login');
+  }
 
-  if (role !== 'OWNER') {
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (error || account?.role !== 'OWNER') {
     redirect('/');
   }
 

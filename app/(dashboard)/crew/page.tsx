@@ -11,9 +11,17 @@ export default async function CrewDashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const role = user?.user_metadata?.role;
+  if (!user) {
+    redirect('/login');
+  }
 
-  if (role !== 'CREW') {
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (error || account?.role !== 'CREW') {
     redirect('/');
   }
 

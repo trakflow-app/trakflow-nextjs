@@ -11,9 +11,17 @@ export default async function ForemanDashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const role = user?.user_metadata?.role;
+  if (!user) {
+    redirect('/login');
+  }
 
-  if (role !== 'FOREMAN') {
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (error || account?.role !== 'FOREMAN') {
     redirect('/');
   }
 
