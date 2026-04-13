@@ -1,5 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
+import { logout } from '@/lib/auth/actions';
 
 /**
  * Placeholder owner dashboard.
@@ -33,6 +36,12 @@ export default async function OwnerDashboardPage() {
           This is a placeholder dashboard for the owner role.
         </p>
       </div>
+      <form action={logout}>
+        <Button variant="outline" type="submit">
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
+      </form>
     </div>
   );
 }
