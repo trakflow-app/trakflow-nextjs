@@ -48,7 +48,7 @@ export async function signup(
   revalidatePath('/', 'layout');
 
   // Send the user to the email confirmation page
-  redirect('/auth/check-email');
+  redirect('/check-email');
 }
 
 /**
@@ -80,18 +80,34 @@ export async function login(
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Get the user's role from Supabase metadata
-  const role = user?.user_metadata?.role as string | undefined;
+  console.log('LOGIN_USER_METADATA', user?.user_metadata);
+
+  let role = user?.user_metadata?.role as string | undefined;
+
+  if (!role && user) {
+    const { data: account, error: accountError } = await supabase
+      .from('accounts')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    console.log('LOGIN_ACCOUNT_ROLE', account?.role);
+    console.log('LOGIN_ACCOUNT_ROLE_ERROR', accountError);
+
+    role = account?.role as string | undefined;
+  }
+
+  console.log('LOGIN_ROLE', role);
 
   // Refresh cached layout data after login
   revalidatePath('/', 'layout');
 
   // Redirect user to the correct dashboard based on role
-  if (role === 'OWNER') redirect('/dashboard/owner');
-  if (role === 'FOREMAN') redirect('/dashboard/foreman');
-  if (role === 'CREW') redirect('/dashboard/crew');
-
+  if (role === 'OWNER') redirect('/owner');
+  if (role === 'FOREMAN') redirect('/foreman');
+  if (role === 'CREW') redirect('/crew');
   // Fallback redirect if no role is found
+  console.log('Falling back to /');
   redirect('/');
 }
 
