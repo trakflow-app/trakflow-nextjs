@@ -23,14 +23,4 @@ export const signupForm = {
   loading: 'Creating account...',
   passwordMismatch: 'Passwords do not match',
   passwordTooShort: 'Password must be at least 8 characters',
-  role: {
-    label: 'Role',
-    placeholder: 'Select a role',
-    options: {
-      labelOwner: 'Owner',
-      labelForeman: 'Foreman',
-      labelCrew: 'Crew',
-    },
-    requiredError: 'Please select a role',
-  },
 };

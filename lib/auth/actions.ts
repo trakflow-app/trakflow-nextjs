@@ -21,9 +21,6 @@ export async function signup(
   // Create Supabase client on the server
   const supabase = await createClient();
 
-  // Read the selected role from the form
-  const role = formData.get('role') as string;
-
   // This the data payload for signup
   const data = {
     email: formData.get('email') as string,
@@ -31,7 +28,7 @@ export async function signup(
     options: {
       data: {
         full_name: formData.get('full_name') as string,
-        role,
+        role: null,
       },
     },
   };
@@ -99,8 +96,9 @@ export async function login(
   if (role === 'OWNER') redirect('/owner');
   if (role === 'FOREMAN') redirect('/foreman');
   if (role === 'CREW') redirect('/crew');
-  // Fallback redirect if no role is found
-  redirect('/');
+
+  // Fallback redirect if no role is found 
+  redirect('/onboarding');
 }
 
 /**
