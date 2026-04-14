@@ -27,7 +27,7 @@ export async function signup(
     password: formData.get('password') as string,
     options: {
       data: {
-        full_name: formData.get('full_name') as string,
+        name: formData.get('full_name') as string,
         role: null,
       },
     },
@@ -97,7 +97,7 @@ export async function login(
   if (role === 'FOREMAN') redirect('/foreman');
   if (role === 'CREW') redirect('/crew');
 
-  // Fallback redirect if no role is found 
+  // Fallback redirect if no role is found
   redirect('/onboarding');
 }
 
@@ -119,20 +119,32 @@ export async function logout() {
 }
 
 /**
- * Get current user's account (without organization join)
- * This works even when user hasn't joined an org yet
+ * Helper function to get the authenticated user.
+ * Redirects to the login page if no user is found.
  */
-export async function getAccount() {
-  // Create Supabase client on the server
+export async function getAuthenticatedUser() {
   const supabase = await createClient();
 
-  // Read the currently signed-in user
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Return null if there is no logged-in user
-  if (!user) return null;
+  if (!user) {
+    redirect('/login');
+  }
+
+  return user;
+}
+
+/**
+ * Get current user's account (without organization join)
+ * This works even when user hasn't joined an org yet
+ */
+export async function getAccount() {
+  // Read the currently signed-in user
+  const user = await getAuthenticatedUser();
+  // Create Supabase client on the server
+  const supabase = await createClient();
 
   // Load the matching account row by user id
   const { data: account, error } = await supabase

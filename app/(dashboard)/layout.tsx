@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { redirect } from 'next/navigation';
+import { getAuthenticatedUser } from '@/lib/auth/actions';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -15,15 +15,7 @@ interface DashboardLayoutProps {
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/login');
-  }
-
+  await createClient();
+  await getAuthenticatedUser();
   return <>{children}</>;
 }
