@@ -5,8 +5,8 @@ import { FolderOpen, Eye, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Card } from '@/components/ui/card';
-import { SearchFilter } from '@/components/search-filter';
-import { type SelectOption } from '@/components/select-field';
+import { SearchFilter } from '../../../../components/search-filter';
+import type { SelectOption } from '../../../../components/select-field';
 import { cn } from '@/lib/utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -205,7 +205,9 @@ export default function ProjectsPage() {
         searchPlaceholder={SEARCH_PLACEHOLDER}
         filterOptions={STATUS_FILTER_OPTIONS}
         filterValue={statusFilter}
-        onFilterChange={(value) => setStatusFilter(value as StatusFilter)}
+        onFilterChange={(value: string) =>
+          setStatusFilter(value as StatusFilter)
+        }
         filterPlaceholder={FILTER_PLACEHOLDER}
       />
 
