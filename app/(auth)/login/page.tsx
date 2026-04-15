@@ -1,7 +1,7 @@
 import LoginForm from '@/components/auth/login-form';
 import Link from 'next/link';
 import Image from 'next/image';
-import { loginForm } from '@/locales/components/auth/login-form';
+import { loginForm } from '@/locales/components/auth/login-form-locales';
 
 /**
  * This is the server side page of login form
@@ -19,7 +19,7 @@ export default function LoginPage() {
             width={500}
             height={100}
             priority
-            className="h-auto w-auto pt-6 pb-4"
+            className="w-auto h-auto"
           />
           <h1 className="text-3xl font-bold">{loginForm.title}</h1>
           <p className="mt-2 text-gray-600">{loginForm.description}</p>

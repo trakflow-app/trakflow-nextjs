@@ -4,139 +4,125 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
+// Shared return type for auth actions
 export type ActionState = {
   error?: string;
 } | null;
 
+/**
+ * Signup logic where anybody can signup
+ * using their validated email address, fullname, password
+ * Redirect to the email confirmation page
+ */
 export async function signup(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  // Create Supabase client on the server
   const supabase = await createClient();
 
+  // This the data payload for signup
   const data = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
     options: {
       data: {
-        full_name: formData.get('full_name') as string,
+        name: formData.get('full_name') as string,
+        role: null,
       },
     },
   };
 
+  // Create the user in Supabase Auth
   const { error } = await supabase.auth.signUp(data);
 
+  // Return the error to the form if signup fails
   if (error) {
     return { error: error.message };
   }
 
+  // Refresh cached layout data after signup
   revalidatePath('/', 'layout');
+
+  // Redirect to the onboarding for org creation
   redirect('/onboarding');
 }
 
+/**
+ * Logs in an existing user and redirects by role.
+ */
 export async function login(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  // Create Supabase client on the server
   const supabase = await createClient();
 
+  // Build the login payload
   const data = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
   };
 
+  // Sign the user in
   const { error } = await supabase.auth.signInWithPassword(data);
 
+  // Return the error to the form if login fails
   if (error) {
     return { error: error.message };
   }
 
+  // Read the authenticated user after login
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let role = user?.user_metadata?.role as string | undefined;
+
+  if (!role && user) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    role = account?.role as string | undefined;
+  }
+
+  // Refresh cached layout data after login
   revalidatePath('/', 'layout');
+
+  // Redirect user to the correct dashboard based on role
+  if (role === 'OWNER') redirect('/owner');
+  if (role === 'FOREMAN') redirect('/foreman');
+  if (role === 'CREW') redirect('/crew');
+
+  // Fallback redirect if no role is found
   redirect('/onboarding');
 }
 
+/**
+ * Logs out the current user and sends them to login.
+ */
 export async function logout() {
+  // Create Supabase client on the server
   const supabase = await createClient();
+
+  // End the current session
   await supabase.auth.signOut();
+
+  // Refresh cached layout data after logout
   revalidatePath('/', 'layout');
+
+  // Send the user back to the login page
   redirect('/login');
 }
 
 /**
- * Get current user's account (without organization join)
- * This works even when user hasn't joined an org yet
+ * Helper function to get the authenticated user.
+ * Redirects to the login page if no user is found.
  */
-export async function getAccount() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  // Don't join with organizations - RLS blocks it when org_id is null
-  const { data: account, error } = await supabase
-    .from('accounts')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  if (error) {
-    console.error('Error fetching account:', error);
-    return null;
-  }
-
-  return account;
-}
-
-/**
- * Get account WITH organization details (only works after user has joined)
- */
-export async function getAccountWithOrg() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  if (accountError || !account) {
-    console.error('Error fetching account:', accountError);
-    return null;
-  }
-
-  // If user has no org, return account without org details
-  if (!account.org_id) {
-    return account;
-  }
-
-  // Fetch organization separately
-  const { data: organization, error: orgError } = await supabase
-    .from('organizations')
-    .select('*')
-    .eq('id', account.org_id)
-    .single();
-
-  if (orgError) {
-    console.error('Error fetching organization:', orgError);
-    return account; // Return account even if org fetch fails
-  }
-
-  return {
-    ...account,
-    organization,
-  };
-}
-
-export async function checkUserOrg() {
+export async function getAuthenticatedUser() {
   const supabase = await createClient();
 
   const {
@@ -144,23 +130,35 @@ export async function checkUserOrg() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { authenticated: false };
+    redirect('/login');
   }
 
+  return user;
+}
+
+/**
+ * Get current user's account (without organization join)
+ * This works even when user hasn't joined an org yet
+ */
+export async function getAccount() {
+  // Read the currently signed-in user
+  const user = await getAuthenticatedUser();
+  // Create Supabase client on the server
+  const supabase = await createClient();
+
+  // Load the matching account row by user id
   const { data: account, error } = await supabase
     .from('accounts')
-    .select('org_id, role')
+    .select('*')
     .eq('id', user.id)
     .single();
 
-  // If RLS denies access or account doesn't exist, assume no org yet
-  if (error || !account) {
-    return { authenticated: true, hasOrg: false, role: null };
+  // Return null if the account lookup fails
+  if (error) {
+    console.error('Error fetching account:', error);
+    return null;
   }
 
-  return {
-    authenticated: true,
-    hasOrg: !!account.org_id,
-    role: account.role,
-  };
+  // Return the account record
+  return account;
 }

@@ -1,31 +1,13 @@
-import { redirect } from 'next/navigation';
-import { checkUserOrg } from '@/lib/auth/actions';
-import CreateOrgForm from '@/components/organization/create-org-form';
-import JoinOrgForm from '@/components/organization/join-org-form';
+import { getAuthenticatedUser } from '@/lib/auth/actions';
 import { logout } from '@/lib/auth/actions';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 
 export default async function OnboardingPage() {
-  const result = await checkUserOrg();
-
-  if (!result.authenticated) {
-    redirect('/login');
-  }
-
-  if (result.hasOrg && result.role) {
-    // Redirect server-side before rendering
-    if (result.role === 'OWNER') {
-      redirect('/owner');
-    } else if (result.role === 'FOREMAN') {
-      redirect('/foreman');
-    } else {
-      redirect('/crew');
-    }
-  }
-
-  // User needs to create/join org
-  // TODO: Clean up later
+  // User needs to create/join org  // Ensure the user is authenticated
+  const user = await getAuthenticatedUser();
+  // Get the user's name from user_metadata
+  const username = user.user_metadata?.full_name || 'User';
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <form action={logout}>
@@ -43,8 +25,9 @@ export default async function OnboardingPage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <CreateOrgForm />
-          <JoinOrgForm />
+          <h1>Welcome to Onboarding</h1>
+          <h1>Hello, {username}!</h1>
+          <p>TODO: We will guide you through the next steps soon.</p>
         </div>
       </div>
     </div>

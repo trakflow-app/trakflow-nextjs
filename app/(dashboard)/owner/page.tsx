@@ -1,48 +1,64 @@
-'use client';
-
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { LogOut } from 'lucide-react';
 import { logout } from '@/lib/auth/actions';
 
-// TODO: Has to fix the UI and role as well
-export default function OwnerPage() {
+/**
+ * Placeholder owner dashboard.
+ */
+export default async function OwnerDashboardPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('role, name')
+    .eq('id', user.id)
+    .single();
+
+  console.log('Owner page - Account error:', error);
+  console.log('Owner page - Account data:', account);
+  console.log('Owner page - Account role:', account?.role);
+  console.log('Owner page - Role check (should be OWNER):', account?.role);
+
+  if (error) {
+    console.error('Error fetching account:', error);
+    redirect('/');
+  }
+
+  if (account?.role !== 'OWNER') {
+    console.log(
+      'Redirecting because role is not OWNER. Actual role:',
+      account?.role,
+    );
+    redirect('/');
+  }
+
+  const username = account?.name;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold">Owner Dashboard</h1>
-            <p className="text-gray-600 mt-2">Manage your organization</p>
-          </div>
-          <form action={logout}>
-            <Button variant="outline" type="submit">
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
-          </form>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card title="Organization">
-            <p className="text-sm text-gray-600">
-              Manage organization settings
-            </p>
-          </Card>
-
-          <Card title="Team Members">
-            <p className="text-sm text-gray-600">
-              View and manage team members
-            </p>
-          </Card>
-
-          <Card title="Join Code">
-            <p className="text-sm text-gray-600">
-              Generate and share join codes
-            </p>
-          </Card>
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
+      <div className="w-full max-w-3xl rounded-xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-bold">Owner Dashboard</h1>
+        <p className="mt-2 text-gray-600">Hello, {username}!</p>
+        <p className="mt-2 text-gray-600">
+          This is a placeholder dashboard for the owner role.
+        </p>
       </div>
+      <form action={logout}>
+        <Button variant="outline" type="submit">
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
+      </form>
     </div>
   );
 }

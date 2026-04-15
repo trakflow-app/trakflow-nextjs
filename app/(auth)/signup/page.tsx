@@ -1,7 +1,7 @@
 import SignupForm from '@/components/auth/signup-form';
 import Link from 'next/link';
 import Image from 'next/image';
-import { signupForm } from '@/locales/components/auth/signup-form';
+import { signupForm } from '@/locales/components/auth/signup-form-locales';
 
 /**
  * This is the server side page of login form
@@ -9,7 +9,7 @@ import { signupForm } from '@/locales/components/auth/signup-form';
  */
 export default function SignupPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-xl shadow-sm">
         <div className="text-center flex flex-col items-center">
           {/* Logo*/}
@@ -19,8 +19,9 @@ export default function SignupPage() {
             width={500}
             height={100}
             priority
-            className="h-auto w-auto pt-6 pb-4"
+            className="w-auto h-auto"
           />
+
           <h1 className="text-3xl font-bold">{signupForm.title}</h1>
           <p className="mt-2 text-gray-600">{signupForm.description}</p>
         </div>

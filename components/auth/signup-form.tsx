@@ -1,6 +1,6 @@
 'use client';
 import { useActionState, useState } from 'react';
-import { signupForm } from '@/locales/components/auth/signup-form';
+import { signupForm } from '@/locales/components/auth/signup-form-locales';
 import { PASSWORD_LENGTH } from '@/constants/components/auth/signup-form-constant';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,95 +56,103 @@ export default function SignupForm() {
   return (
     <form action={handleAction} className="space-y-6">
       {activeError && (
-        <div className="rounded-md bg-red-50 p-4 text-sm text-red-800">
+        <div
+          role="alert"
+          aria-live="polite"
+          className="rounded-md bg-red-50 p-4 text-sm text-red-800"
+        >
           {activeError}
         </div>
       )}
 
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="full_name">{signupForm.fullName.label}</Label>
-          <Input
-            id="full_name"
-            name="full_name"
-            type="text"
-            required
-            placeholder={signupForm.fullName.placeholder}
-            disabled={isPending}
-          />
-        </div>
+      <div>
+        <Label htmlFor="full_name">{signupForm.fullName.label}</Label>
+        <Input
+          id="full_name"
+          name="full_name"
+          type="text"
+          required
+          placeholder={signupForm.fullName.placeholder}
+          disabled={isPending}
+        />
+      </div>
 
-        <div>
-          <Label htmlFor="email">{signupForm.email.label}</Label>
+      <div>
+        <Label htmlFor="email">{signupForm.email.label}</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          placeholder={signupForm.email.placeholder}
+          disabled={isPending}
+          className="pr-10"
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="password">{signupForm.password.label}</Label>
+        <div className="relative">
           <Input
-            id="email"
-            name="email"
-            type="email"
+            id="password"
+            name="password"
+            type={showPassword ? 'text' : 'password'}
             required
-            autoComplete="email"
-            placeholder={signupForm.email.placeholder}
+            autoComplete="new-password"
+            placeholder={signupForm.password.placeholder}
+            minLength={PASSWORD_LENGTH}
             disabled={isPending}
             className="pr-10"
+            aria-invalid={Boolean(activeError)}
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 disabled:opacity-50"
+            disabled={isPending}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
         </div>
+      </div>
 
-        <div>
-          <Label htmlFor="password">{signupForm.password.label}</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              name="password"
-              type={showPassword ? 'text' : 'password'}
-              required
-              autoComplete="new-password"
-              placeholder={signupForm.password.placeholder}
-              minLength={PASSWORD_LENGTH}
-              disabled={isPending}
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 disabled:opacity-50"
-              disabled={isPending}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="confirm_password">
-            {signupForm.confirmPassword.label}
-          </Label>
-          <div className="relative">
-            <Input
-              id="confirm_password"
-              name="confirm_password"
-              type={showPassword ? 'text' : 'password'}
-              required
-              autoComplete="new-password"
-              placeholder={signupForm.confirmPassword.placeholder}
-              minLength={8}
-              disabled={isPending}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 disabled:opacity-50"
-              disabled={isPending}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
-            </button>
-          </div>
+      <div>
+        <Label htmlFor="confirm_password">
+          {signupForm.confirmPassword.label}
+        </Label>
+        <div className="relative">
+          <Input
+            id="confirm_password"
+            name="confirm_password"
+            type={showPassword ? 'text' : 'password'}
+            required
+            autoComplete="new-password"
+            placeholder={signupForm.confirmPassword.placeholder}
+            minLength={PASSWORD_LENGTH}
+            disabled={isPending}
+            aria-invalid={Boolean(activeError)}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={
+              showPassword ? 'Hide confirm password' : 'Show confirm password'
+            }
+            className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 disabled:opacity-50"
+            disabled={isPending}
+          >
+            {showPassword ? (
+              <EyeOff className="h-4 w-4" />
+            ) : (
+              <Eye className="h-4 w-4" />
+            )}
+          </button>
         </div>
       </div>
 

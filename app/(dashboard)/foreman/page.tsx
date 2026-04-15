@@ -1,38 +1,45 @@
-'use client';
-
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { getAuthenticatedUser } from '@/lib/auth/actions';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { LogOut } from 'lucide-react';
 import { logout } from '@/lib/auth/actions';
+/**
+ * Placeholder foreman dashboard.
+ */
+export default async function ForemanDashboardPage() {
+  // Read the currently signed-in user
+  const user = await getAuthenticatedUser();
+  // Create Supabase client on the server
+  const supabase = await createClient();
+  // Query the account to check the user's details
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('role, name')
+    .eq('id', user.id)
+    .single();
 
-// TODO: Has to fix the UI and role as well
-export default function ForemanPage() {
+  if (error || account?.role !== 'FOREMAN') {
+    redirect('/');
+  }
+
+  const username = account?.name;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold">Foreman Dashboard</h1>
-            <p className="text-gray-600 mt-2">Manage your crew</p>
-          </div>
-          <form action={logout}>
-            <Button variant="outline" type="submit">
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </Button>
-          </form>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card title="Crew Members">
-            <p className="text-sm text-gray-600">View your crew members</p>
-          </Card>
-
-          <Card title="Invite Crew">
-            <p className="text-sm text-gray-600">Invite new crew members</p>
-          </Card>
-        </div>
+    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
+      <div className="w-full max-w-3xl rounded-xl bg-white p-8 shadow-sm">
+        <h1 className="text-3xl font-bold">Foreman Dashboard</h1>
+        <p className="mt-2 text-gray-600">Hello, {username}!</p>
+        <p className="mt-2 text-gray-600">
+          This is a placeholder dashboard for the foreman role.
+        </p>
       </div>
+      <form action={logout}>
+        <Button variant="outline" type="submit">
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
+      </form>
     </div>
   );
 }

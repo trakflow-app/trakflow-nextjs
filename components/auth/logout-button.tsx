@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { logout } from '@/lib/auth/actions';
 import { LogOut } from 'lucide-react';
-import { logoutButton } from '@/locales/components/auth/logout-button';
+import { logoutButton } from '@/locales/components/auth/logout-button-locales';
 
 interface LogoutButtonProps {
   variant?: 'default' | 'ghost' | 'outline';
