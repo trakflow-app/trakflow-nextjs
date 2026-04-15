@@ -20,6 +20,7 @@ export interface SelectFieldProps {
   onChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  className?: string;
 }
 
 /**
@@ -32,10 +33,11 @@ export function SelectField({
   onChange,
   placeholder,
   disabled,
+  className,
 }: SelectFieldProps) {
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger id={id}>
+      <SelectTrigger id={id} className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

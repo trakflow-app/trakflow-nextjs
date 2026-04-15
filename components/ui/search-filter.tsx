@@ -2,7 +2,7 @@
 
 import type { ChangeEvent } from 'react';
 
-import { SelectField, type SelectOption } from '@/components/select-field';
+import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
