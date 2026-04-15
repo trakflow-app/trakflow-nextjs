@@ -44,8 +44,8 @@ export async function signup(
   // Refresh cached layout data after signup
   revalidatePath('/', 'layout');
 
-  // Send the user to the email confirmation page
-  redirect('/check-email');
+  // Redirect to the onboarding for org creation
+  redirect('/onboarding');
 }
 
 /**
