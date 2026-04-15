@@ -5,6 +5,7 @@ This is a Next.js (full stack) app designed to help construction teams track too
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [Tech Stack Docs](#tech-stack-docs)
 - [Required Software](#required-software)
 - [About the env file](#about-the-env-file)
 - [Connecting to Supabase](#connecting-to-the-supabase)
@@ -17,6 +18,10 @@ This is a Next.js (full stack) app designed to help construction teams track too
 ### Local Development
 
 This app is designed to run locally for development. You’ll need Node.js and a Supabase project.
+
+## Tech Stack Docs
+
+For the current stack overview and the project documentation map, see `docs/tech-stack.md`.
 
 ## Required Software
 
