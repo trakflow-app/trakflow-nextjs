@@ -256,7 +256,9 @@ export default function ProjectsPage() {
             searchPlaceholder={SEARCH_PLACEHOLDER}
             filterOptions={FILTER_OPTIONS}
             filterValue={statusFilter}
-            onFilterChange={(value: string) => setStatusFilter(value as FilterValue)}
+            onFilterChange={(value: string) =>
+              setStatusFilter(value as FilterValue)
+            }
             filterPlaceholder={FILTER_PLACEHOLDER}
           />
         </div>
