@@ -49,6 +49,73 @@ export async function signup(
 }
 
 /**
+ * Crew signup with org code validation.
+ * Creates a user with role 'CREW' and associates with the org.
+ */
+export async function signupCrew(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createClient();
+
+  const fullName = formData.get('full_name') as string;
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const orgCode = formData.get('org_code') as string;
+
+  // Validate org code
+  const { data: org, error: orgError } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('join_code', orgCode.toUpperCase())
+    .single();
+
+  if (orgError || !org) {
+    return { error: 'Invalid organization code.' };
+  }
+
+  // Create user in Supabase Auth
+  const { error: signupError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name: fullName,
+        role: 'CREW',
+        organization_id: org.id,
+      },
+    },
+  });
+
+  if (signupError) {
+    return { error: signupError.message };
+  }
+
+  // Optionally, add user to accounts/orgs table if needed
+
+  // Revalidate and redirect
+  revalidatePath('/', 'layout');
+  redirect('/crew');
+}
+
+/**
+ * Verifies if the provided org code is valid.
+ * Returns { valid: true } if found, otherwise { valid: false }.
+ */
+export async function verifyOrgCode(
+  orgCode: string,
+): Promise<{ valid: boolean }> {
+  const supabase = await createClient();
+
+  // Call the database function that allows unauthenticated access
+  const { data, error } = await supabase.rpc('verify_org_code', {
+    join_code_input: orgCode.toUpperCase(),
+  });
+
+  return { valid: !!data && !error };
+}
+
+/**
  * Logs in an existing user and redirects by role.
  */
 export async function login(

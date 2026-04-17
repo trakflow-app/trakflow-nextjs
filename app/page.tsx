@@ -39,6 +39,12 @@ export default function Home() {
             >
               Sign Up
             </Link>
+            <Link
+              href="/signup/crew"
+              className="inline-flex h-12 items-center justify-center rounded-lg border border-gray-300 px-6 font-medium text-gray-800 hover:bg-gray-50"
+            >
+              Join as Crew (with code)
+            </Link>
           </div>
         </div>
 
