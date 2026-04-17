@@ -5,18 +5,26 @@ import { PASSWORD_LENGTH } from '@/constants/components/auth/signup-form-constan
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { signup } from '@/lib/auth/actions';
+import { signup, signupCrew } from '@/lib/auth/actions';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
  * Signup form for the new users
+ * @param orgCode Optional organization code for crew signup
  */
-export default function SignupForm() {
+export default function SignupForm({ orgCode }: { orgCode?: string }) {
+  /**
+   * Determine which action to use based on whether orgCode is provided.
+   * - If orgCode exists: use signupCrew (which assigns org_id and role)
+   * - If no orgCode: use signup (for OWNER/regular signup, user goes to onboarding)
+   */
+  const action = orgCode ? signupCrew : signup;
+
   /**
    * useActionState to link the form to the server action.
    * 'state' will capture the { error: string } returned by the server.
    */
-  const [state, formAction, isPending] = useActionState(signup, null);
+  const [state, formAction, isPending] = useActionState(action, null);
 
   /** Local error state for client-side specific checks */
   const [clientError, setClientError] = useState<string | null>(null);
@@ -44,6 +52,11 @@ export default function SignupForm() {
     if (password.length < PASSWORD_LENGTH) {
       setClientError(signupForm.passwordTooShort);
       return;
+    }
+
+    // If orgCode is provided, ensure it is included in the formData
+    if (orgCode) {
+      formData.set('org_code', orgCode);
     }
 
     // If all good, trigger the server action
@@ -155,6 +168,9 @@ export default function SignupForm() {
           </button>
         </div>
       </div>
+
+      {/* Hidden org_code field if provided */}
+      {orgCode && <input type="hidden" name="org_code" value={orgCode} />}
 
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? signupForm.loading : signupForm.submitButton}
