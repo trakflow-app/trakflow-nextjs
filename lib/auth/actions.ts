@@ -62,27 +62,33 @@ export async function signupCrew(
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const orgCode = formData.get('org_code') as string;
+  const orgId = formData.get('org_id') as string;
+  const role = formData.get('role') as string;
 
-  // Validate org code
-  const { data: org, error: orgError } = await supabase
-    .from('organizations')
-    .select('id')
-    .eq('join_code', orgCode.toUpperCase())
-    .single();
+  // Verify org code exists and get org ID using RPC function
+  const { data: verifiedOrgId, error: orgError } = await supabase.rpc(
+    'get_org_id_by_code',
+    { join_code_input: orgCode },
+  );
 
-  if (orgError || !org) {
+  if (orgError || !verifiedOrgId) {
     return { error: 'Invalid organization code.' };
   }
 
-  // Create user in Supabase Auth
+  // Ensure the org_id from form matches the verified one
+  if (orgId !== verifiedOrgId) {
+    return { error: 'Organization mismatch. Please try again.' };
+  }
+
+  // Create user in Supabase Auth with metadata
   const { error: signupError } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         name: fullName,
-        role: 'CREW',
-        organization_id: org.id,
+        role: role || 'CREW',
+        organization_id: orgId,
       },
     },
   });
@@ -91,28 +97,9 @@ export async function signupCrew(
     return { error: signupError.message };
   }
 
-  // Optionally, add user to accounts/orgs table if needed
-
   // Revalidate and redirect
   revalidatePath('/', 'layout');
   redirect('/crew');
-}
-
-/**
- * Verifies if the provided org code is valid.
- * Returns { valid: true } if found, otherwise { valid: false }.
- */
-export async function verifyOrgCode(
-  orgCode: string,
-): Promise<{ valid: boolean }> {
-  const supabase = await createClient();
-
-  // Call the database function that allows unauthenticated access
-  const { data, error } = await supabase.rpc('verify_org_code', {
-    join_code_input: orgCode.toUpperCase(),
-  });
-
-  return { valid: !!data && !error };
 }
 
 /**
@@ -228,4 +215,41 @@ export async function getAccount() {
 
   // Return the account record
   return account;
+}
+
+/**
+ * Verifies if the provided org code is valid.
+ * Returns { valid: true } if found, otherwise { valid: false }.
+ */
+export async function verifyOrgCode(
+  orgCode: string,
+): Promise<{ valid: boolean }> {
+  const supabase = await createClient();
+
+  // Call the database function that allows unauthenticated access
+  const { data, error } = await supabase.rpc('verify_org_code', {
+    join_code_input: orgCode.toUpperCase(),
+  });
+
+  return { valid: !!data && !error };
+}
+
+/**
+ * Fetches organization name by join code.
+ * Used during crew signup verification.
+ */
+export async function getOrgNameByCode(
+  orgCode: string,
+): Promise<{ name: string | null; error: string | null }> {
+  const supabase = await createClient();
+
+  const { data: name, error } = await supabase.rpc('get_org_name_by_code', {
+    join_code_input: orgCode,
+  });
+
+  if (error || !name) {
+    return { name: null, error: 'Failed to load organization details.' };
+  }
+
+  return { name, error: null };
 }
