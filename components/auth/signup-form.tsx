@@ -10,9 +10,15 @@ import { Eye, EyeOff } from 'lucide-react';
 
 /**
  * Signup form for the new users
- * @param orgCode Optional organization code for crew signup
+ * @param orgCode and orgId Optional organization code for crew signup
  */
-export default function SignupForm({ orgCode }: { orgCode?: string }) {
+export default function SignupForm({
+  orgCode,
+  orgId,
+}: {
+  orgCode?: string;
+  orgId?: string;
+}) {
   /**
    * Determine which action to use based on whether orgCode is provided.
    * - If orgCode exists: use signupCrew (which assigns org_id and role)
@@ -52,11 +58,6 @@ export default function SignupForm({ orgCode }: { orgCode?: string }) {
     if (password.length < PASSWORD_LENGTH) {
       setClientError(signupForm.passwordTooShort);
       return;
-    }
-
-    // If orgCode is provided, ensure it is included in the formData
-    if (orgCode) {
-      formData.set('org_code', orgCode);
     }
 
     // If all good, trigger the server action
@@ -169,8 +170,10 @@ export default function SignupForm({ orgCode }: { orgCode?: string }) {
         </div>
       </div>
 
-      {/* Hidden org_code field if provided */}
+      {/* Hidden fields for crew signup - MUST be inside the form */}
       {orgCode && <input type="hidden" name="org_code" value={orgCode} />}
+      {orgId && <input type="hidden" name="org_id" value={orgId} />}
+      {orgCode && <input type="hidden" name="role" value="CREW" />}
 
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? signupForm.loading : signupForm.submitButton}
