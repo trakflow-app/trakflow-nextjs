@@ -10,5 +10,5 @@ export const crewCodeVerificationForm = {
   orgCodeLabel: ' Organization Code',
   buttonLabel: 'Continue to signup',
   footerNeedHelp: 'Need help?',
-  contactSupport: 'Contact support'
+  contactSupport: 'Contact support',
 };
