@@ -1,0 +1,17 @@
+name: PR Label Notification
+on:
+  pull_request:
+    types: [labeled] # Triggers only when a label is added
+
+jobs:
+  notify-discord:
+    if: github.event.label.name == 'Ready-for-review' # Only trigger for this label
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord Notification
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          text: "🚀 PR Ready for Review"
+          details: "PR **${{ github.event.pull_request.title }}** is ready!\n[View PR](${{ github.event.pull_request.html_url }})"
