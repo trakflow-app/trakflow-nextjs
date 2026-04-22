@@ -4,8 +4,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: 'var(--color-primary)',
-        'text-primary': 'var(--color-text-primary)',
+        primary: 'var(--brand-primary)',
+        'text-primary': 'var(--color-foreground)',
       },
       spacing: {
         1: 'var(--space-1)',
