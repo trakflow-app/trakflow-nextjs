@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -21,12 +20,11 @@ export function Logo({
   href,
   className,
   imageClassName,
-  textClassName,
   showText = true,
 }: LogoProps) {
   const content = (
     <div className={cn('flex items-center gap-2', className)}>
-      <Image
+      <img
         src={LOGO_SRC}
         alt={showText ? '' : LOGO_ALT}
         aria-hidden={showText}
