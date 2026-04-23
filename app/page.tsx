@@ -3,7 +3,7 @@ import Image from 'next/image';
 import React from 'react';
 import { SelectField } from '@/components/ui/select-field';
 import Link from 'next/link';
-import { AppImage } from '@/components/ui/image';
+import { AppImage } from '@/components/ui/app-image';
 export default function Home() {
   const STATUS_OPTIONS = [
     { label: 'better', value: 'better' },
@@ -20,7 +20,7 @@ export default function Home() {
         <AppImage
           className="dark:invert"
           src="/trakflow-logo.png"
-          alt="Next.js logo"
+          alt="TrakFlow logo"
           width={100}
           height={20}
           rounded="none"
