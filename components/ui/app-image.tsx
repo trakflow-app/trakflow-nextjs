@@ -78,7 +78,7 @@ const ratioMap: Record<Exclude<AspectRatio, 'auto'>, string> = {
 /**
  * Renders a Next.js image with fallback, rounded corners, fit, and aspect ratio handling.
  */
-export function AppImage({
+export default function AppImage({
   src,
   alt,
   fallbackSrc = DEFAULT_FALLBACK_SRC,
