@@ -49,6 +49,64 @@ export async function signup(
 }
 
 /**
+ * Foreman signup via invite token.
+ * Validates invite, creates user, marks invite as used, redirects to /foreman.
+ */
+export async function signupForeman(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createClient();
+
+  const fullName = formData.get('full_name') as string;
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const inviteToken = formData.get('invite_token') as string;
+
+  // Re-validate using the RPC (Safe & No RLS needed)
+  const { data: inviteArray } = await supabase.rpc('get_invite_details', {
+    token_input: inviteToken,
+  });
+  const invite = inviteArray?.[0];
+
+  if (!invite?.is_valid || invite.invited_email !== email) {
+    return { error: 'Invalid or mismatched invite.' };
+  }
+
+  // Create user in Supabase Auth with metadata
+  const { data: signupData, error: signupError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name: fullName,
+        role: 'FOREMAN',
+        organization_id: invite.org_id,
+      },
+    },
+  });
+
+  if (signupError) return { error: signupError.message };
+
+  const userId = signupData.user?.id;
+
+  if (userId) {
+    const { error: rpcError } = await supabase.rpc('mark_invite_used', {
+      token_input: inviteToken,
+      user_id_input: userId,
+    });
+
+    if (rpcError) {
+      console.error('Failed to mark invite as used:', rpcError);
+    }
+  }
+
+  // Revalidate and redirect
+  revalidatePath('/', 'layout');
+  redirect('/foreman');
+}
+
+/**
  * Crew signup with org code validation.
  * Creates a user with role 'CREW' and associates with the org.
  */
@@ -232,6 +290,33 @@ export async function verifyOrgCode(
   });
 
   return { valid: !!data && !error };
+}
+
+/**
+ * Validate foreman invite token and return invite details
+ */
+export async function validateForemanInviteToken(token: string) {
+  // Fetch invite from DB
+  const supabase = await createClient();
+
+  // Call the new RPC function we created in the migration
+  const { data, error } = await supabase.rpc('get_invite_details', {
+    token_input: token,
+  });
+
+  // RPC returns an array in Supabase JS, so we take the first item
+  const invite = data?.[0];
+
+  if (error || !invite || !invite.is_valid) {
+    console.error('Validation Error:', error || invite?.error_message);
+    return { error: invite?.error_message || 'Invite not found.' };
+  }
+
+  return {
+    email: invite.invited_email,
+    orgId: invite.org_id,
+    orgName: invite.org_name,
+  };
 }
 
 /**

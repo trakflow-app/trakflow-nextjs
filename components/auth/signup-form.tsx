@@ -5,7 +5,7 @@ import { PASSWORD_LENGTH } from '@/constants/components/auth/signup-form-constan
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { signup, signupCrew } from '@/lib/auth/actions';
+import { signup, signupCrew, signupForeman } from '@/lib/auth/actions';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
@@ -15,16 +15,22 @@ import { Eye, EyeOff } from 'lucide-react';
 export default function SignupForm({
   orgCode,
   orgId,
+  email,
+  role,
+  inviteToken,
 }: {
   orgCode?: string;
   orgId?: string;
+  email?: string;
+  role?: string;
+  inviteToken?: string;
 }) {
   /**
    * Determine which action to use based on whether orgCode is provided.
    * - If orgCode exists: use signupCrew (which assigns org_id and role)
    * - If no orgCode: use signup (for OWNER/regular signup, user goes to onboarding)
    */
-  const action = orgCode ? signupCrew : signup;
+  const action = inviteToken ? signupForeman : orgCode ? signupCrew : signup;
 
   /**
    * useActionState to link the form to the server action.
@@ -100,8 +106,10 @@ export default function SignupForm({
           required
           autoComplete="email"
           placeholder={signupForm.email.placeholder}
-          disabled={isPending}
+          disabled={!!email || isPending}
           className="pr-10"
+          value={email ?? undefined}
+          readOnly={!!email}
         />
       </div>
 
@@ -170,10 +178,16 @@ export default function SignupForm({
         </div>
       </div>
 
-      {/* Hidden fields for crew signup - MUST be inside the form */}
+      {/* Hidden fields for server actions */}
+      {email && <input type="hidden" name="email" value={email} />}
+      {inviteToken && (
+        <input type="hidden" name="invite_token" value={inviteToken} />
+      )}
       {orgCode && <input type="hidden" name="org_code" value={orgCode} />}
       {orgId && <input type="hidden" name="org_id" value={orgId} />}
-      {orgCode && <input type="hidden" name="role" value="CREW" />}
+      {(role || (orgCode && !role)) && (
+        <input type="hidden" name="role" value={role || 'CREW'} />
+      )}
 
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? signupForm.loading : signupForm.submitButton}
