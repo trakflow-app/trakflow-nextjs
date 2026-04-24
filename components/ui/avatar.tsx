@@ -83,14 +83,14 @@ export interface AvatarProps
   extends
     React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>,
     VariantProps<typeof avatarVariants> {
-    src?: string;
-    alt?: string;
-    name?: string;
-    fallback?: string;
-    status?: keyof typeof statusLabelMap;
-    imageClassName?: string;
-    fallbackClassName?: string;
-    statusClassName?: string;
+  src?: string;
+  alt?: string;
+  name?: string;
+  fallback?: string;
+  status?: keyof typeof statusLabelMap;
+  imageClassName?: string;
+  fallbackClassName?: string;
+  statusClassName?: string;
 }
 
 function getInitials(name?: string) {
