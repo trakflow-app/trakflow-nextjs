@@ -14,6 +14,10 @@ import {
 import { AlertCircle, Loader2, ShieldCheck, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { crewCodeVerificationForm } from '@/locales/components/auth/crew-code-verification-form-locales';
+import {
+  CODE_LENGTH_BEFORE_DASH,
+  CODE_TOTAL_LENGTH,
+} from '@/constants/components/auth/crew-code-verification-form-constant';
 
 interface CrewCodeVerificationFormProps {
   onVerified: (orgName: string, orgId: string, orgCode: string) => void;
@@ -63,6 +67,18 @@ export default function CrewCodeVerificationForm({
     }
   }
 
+  function formatOrgCodeInput(input: string) {
+    let value = input.replace(/[^A-HJ-NP-Z2-9]/gi, '').toUpperCase();
+    if (value.length > CODE_TOTAL_LENGTH)
+      value = value.slice(0, CODE_TOTAL_LENGTH);
+    if (value.length > CODE_LENGTH_BEFORE_DASH)
+      value =
+        value.slice(0, CODE_LENGTH_BEFORE_DASH) +
+        '-' +
+        value.slice(CODE_LENGTH_BEFORE_DASH);
+    return value;
+  }
+
   return (
     <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-500">
       {/* Brand/Logo Header */}
@@ -105,7 +121,7 @@ export default function CrewCodeVerificationForm({
                 id="org_code"
                 placeholder="XXXX-XXXX"
                 value={orgCode}
-                onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
+                onChange={(e) => setOrgCode(formatOrgCodeInput(e.target.value))}
                 className="h-12 text-center font-mono text-xl tracking-[0.3em] uppercase bg-slate-50 dark:bg-slate-950 focus-visible:ring-primary/30"
                 required
                 disabled={isLoading}
