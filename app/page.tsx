@@ -33,14 +33,19 @@ export default function Home() {
             >
               Sign Up
             </Link>
+            <Link
+              href="/signup/crew"
+              className="inline-flex h-12 items-center justify-center rounded-lg border border-gray-300 px-6 font-medium text-gray-800 hover:bg-gray-50"
+            >
+              Join as Crew (with code)
+            </Link>
           </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <div className="flex flex-col gap-4">
+          <Link
+            href="/login"
+            className="inline-flex h-12 items-center justify-center rounded-lg bg-blue-600 px-6 font-medium text-white hover:bg-blue-700"
           >
             <Image
               className="dark:invert"
@@ -50,7 +55,7 @@ export default function Home() {
               height={16}
             />
             Deploy Now
-          </a>
+          </Link>
           <a
             className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
             href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
