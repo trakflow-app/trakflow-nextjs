@@ -65,6 +65,18 @@ function Button({
     isLoading?: boolean;
   }) {
   const Comp = asChild ? Slot.Root : 'button';
+  const buttonContent = isLoading ? (
+    <>
+      <span
+        className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+        aria-hidden="true"
+      />
+      <span className="sr-only">{children}</span>
+      <span className="sr-only">{SPINNER_LABEL}</span>
+    </>
+  ) : (
+    children
+  );
 
   return (
     <Comp
@@ -75,14 +87,7 @@ function Button({
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     >
-      {isLoading && (
-        <span
-          className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-          aria-hidden="true"
-        />
-      )}
-      <span className={isLoading ? 'sr-only' : undefined}>{children}</span>
-      {isLoading && <span className="sr-only">{SPINNER_LABEL}</span>}
+      {asChild ? children : buttonContent}
     </Comp>
   );
 }

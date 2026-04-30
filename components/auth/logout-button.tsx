@@ -33,7 +33,7 @@ export default function LogoutButton({
       disabled={loading}
       className={className}
     >
-      <LogOut className="mr-2 h-4 w-4" />
+      <LogOut data-icon="inline-start" />
       {loading ? logoutButton.loading : logoutButton.submitButton}
     </Button>
   );
