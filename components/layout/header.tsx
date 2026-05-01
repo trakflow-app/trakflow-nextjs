@@ -59,17 +59,14 @@ function mapHeaderUser(user: User | null): HeaderUser | null {
   };
 }
 
-/**
- * Renders the sticky site header with auth-aware navigation.
- */
 export async function Header() {
   const user = await getCurrentHeaderUser();
   const headerUser = mapHeaderUser(user);
 
   return (
-    <header className={HEADER_SHELL_CLASS_NAME}>
+    <header className='sticky top-0 z-40 bg-white dark:bg-primary'>
       <div className={HEADER_INNER_CLASS_NAME}>
-        <Logo href={HEADER_HOME_HREF} imageClassName="h-8 w-auto" />
+        <Logo href={HEADER_HOME_HREF} imageClassName="h-14 w-auto rounded-lg" />
         <HeaderNavigation user={headerUser} />
       </div>
     </header>

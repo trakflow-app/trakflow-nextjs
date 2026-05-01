@@ -21,9 +21,6 @@ import {
   HEADER_NAVIGATION_LABEL,
 } from '@/locales/components/layout/header-locales';
 
-/**
- * Public user details needed by the header navigation.
- */
 export interface HeaderUser {
   name: string;
   avatarUrl?: string;
@@ -33,9 +30,6 @@ interface HeaderNavigationProps {
   user: HeaderUser | null;
 }
 
-/**
- * Renders desktop and mobile header navigation with auth-aware actions.
- */
 export function HeaderNavigation({ user }: HeaderNavigationProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isAuthenticated = Boolean(user);
@@ -64,7 +58,7 @@ export function HeaderNavigation({ user }: HeaderNavigationProps) {
   }, [isMenuOpen]);
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 bg-white dark:bg-primary">
       <nav
         aria-label={HEADER_NAVIGATION_LABEL}
         className={HEADER_DESKTOP_NAV_CLASS_NAME}
