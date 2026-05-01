@@ -16,13 +16,11 @@ export default function SignupForm({
   orgCode,
   orgId,
   email,
-  role,
   inviteToken,
 }: {
   orgCode?: string;
   orgId?: string;
   email?: string;
-  role?: string;
   inviteToken?: string;
 }) {
   /**
@@ -185,9 +183,6 @@ export default function SignupForm({
       )}
       {orgCode && <input type="hidden" name="org_code" value={orgCode} />}
       {orgId && <input type="hidden" name="org_id" value={orgId} />}
-      {(role || (orgCode && !role)) && (
-        <input type="hidden" name="role" value={role || 'CREW'} />
-      )}
 
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? signupForm.loading : signupForm.submitButton}
