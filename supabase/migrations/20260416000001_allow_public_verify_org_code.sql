@@ -44,8 +44,3 @@ as $$
 $$;
 
 grant execute on function public.get_org_name_by_code(text) to anon, authenticated;
-
--- RLS policy: Allow public users to read organizations (needed for signup verification)
-create policy organizations_anon_select
-  on public.organizations for select to anon
-  using (true);

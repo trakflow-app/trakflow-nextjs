@@ -63,18 +63,27 @@ export async function signupForeman(
   const password = formData.get('password') as string;
   const inviteToken = formData.get('invite_token') as string;
 
-  // Re-validate using the RPC (Safe & No RLS needed)
+  // Fetch invite details
   const { data: inviteArray } = await supabase.rpc('get_invite_details', {
     token_input: inviteToken,
   });
   const invite = inviteArray?.[0];
 
+  // Validate invite existence and email match
   if (!invite?.is_valid || invite.invited_email !== email) {
     return { error: 'Invalid or mismatched invite.' };
   }
 
+  // Verify role is FOREMAN
+  if (invite.role !== 'FOREMAN') {
+    return {
+      error:
+        'This invite is for a worker role. Please use the worker signup link.',
+    };
+  }
+
   // Create user in Supabase Auth with metadata
-  const { data: signupData, error: signupError } = await supabase.auth.signUp({
+  const { error: signupError } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -88,17 +97,15 @@ export async function signupForeman(
 
   if (signupError) return { error: signupError.message };
 
-  const userId = signupData.user?.id;
+  // Claim the invite
+  const { error: rpcError } = await supabase.rpc('claim_org_invite', {
+    token: inviteToken,
+  });
 
-  if (userId) {
-    const { error: rpcError } = await supabase.rpc('mark_invite_used', {
-      token_input: inviteToken,
-      user_id_input: userId,
-    });
-
-    if (rpcError) {
-      console.error('Failed to mark invite as used:', rpcError);
-    }
+  if (rpcError) {
+    // If the email used doesn't match the manual invite email, this triggers.
+    console.error('Database Error:', rpcError.message);
+    return { error: rpcError.message }; // Show the real DB error
   }
 
   // Revalidate and redirect
@@ -203,15 +210,18 @@ export async function login(
     role = account?.role as string | undefined;
   }
 
-  // Refresh cached layout data after login
-  revalidatePath('/', 'layout');
+  const roleRedirects: Record<string, string> = {
+    OWNER: '/owner',
+    FOREMAN: '/foreman',
+    CREW: '/crew',
+  };
 
-  // Redirect user to the correct dashboard based on role
-  if (role === 'OWNER') redirect('/owner');
-  if (role === 'FOREMAN') redirect('/foreman');
-  if (role === 'CREW') redirect('/crew');
+  if (role && roleRedirects[role]) {
+    revalidatePath('/', 'layout');
+    redirect(roleRedirects[role]);
+  }
 
-  // Fallback redirect if no role is found
+  // Fallback redirect
   redirect('/onboarding');
 }
 
