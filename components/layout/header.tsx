@@ -64,7 +64,7 @@ export async function Header() {
   const headerUser = mapHeaderUser(user);
 
   return (
-    <header className='sticky top-0 z-40 bg-white dark:bg-primary'>
+    <header className="sticky top-0 z-40 bg-white dark:bg-primary">
       <div className={HEADER_INNER_CLASS_NAME}>
         <Logo href={HEADER_HOME_HREF} imageClassName="h-14 w-auto rounded-lg" />
         <HeaderNavigation user={headerUser} />
