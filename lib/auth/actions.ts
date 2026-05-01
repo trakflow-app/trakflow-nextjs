@@ -121,7 +121,9 @@ export async function signupCrew(
   const password = formData.get('password') as string;
   const orgCode = formData.get('org_code') as string;
   const orgId = formData.get('org_id') as string;
-  const role = formData.get('role') as string;
+
+  // We explicitly hardcode it to 'CREW' to prevent privilege escalation.
+  const ENFORCED_ROLE = 'CREW';
 
   // Verify org code exists and get org ID using RPC function
   const { data: verifiedOrgId, error: orgError } = await supabase.rpc(
@@ -145,7 +147,7 @@ export async function signupCrew(
     options: {
       data: {
         name: fullName,
-        role: role || 'CREW',
+        role: ENFORCED_ROLE,
         organization_id: orgId,
       },
     },
