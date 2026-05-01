@@ -104,7 +104,6 @@ export default async function InvitePage(props: {
           <SignupForm
             email={invite.email}
             orgId={invite.orgId}
-            role="FOREMAN"
             inviteToken={params.token}
           />
 
