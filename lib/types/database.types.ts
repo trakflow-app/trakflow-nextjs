@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.4"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       accounts: {
@@ -572,6 +547,17 @@ export type Database = {
         }
         Returns: string
       }
+      get_invite_details: {
+        Args: { token_input: string }
+        Returns: {
+          error_message: string
+          invited_email: string
+          is_valid: boolean
+          org_id: string
+          org_name: string
+          role: string
+        }[]
+      }
       get_my_org_id: { Args: never; Returns: string }
       get_my_role: {
         Args: never
@@ -735,9 +721,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       project_status: ["ACTIVE", "COMPLETED"],
