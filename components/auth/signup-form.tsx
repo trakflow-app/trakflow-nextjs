@@ -9,9 +9,17 @@ import { signup } from '@/lib/auth/actions';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
+ * Props for the SignupForm component.
+ */
+interface SignupFormProps {
+  /** Optional path to redirect to after successful signup (e.g. /join/[token]). */
+  redirect?: string;
+}
+
+/**
  * Signup form for the new users
  */
-export default function SignupForm() {
+export default function SignupForm({ redirect }: SignupFormProps) {
   /**
    * useActionState to link the form to the server action.
    * 'state' will capture the { error: string } returned by the server.
@@ -55,6 +63,9 @@ export default function SignupForm() {
 
   return (
     <form action={handleAction} className="space-y-6">
+      {/* Carries the post-auth redirect destination into the server action
+          so the action can send the user back to their invite link. */}
+      {redirect && <input type="hidden" name="redirect" value={redirect} />}
       {activeError && (
         <div
           role="alert"
