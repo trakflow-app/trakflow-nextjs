@@ -10,7 +10,8 @@ export const CLAIM_ACTION_MESSAGES = {
     'This account already belongs to an organization and cannot use this invite.',
   emailMismatch:
     'This invite was sent to a different email address. Sign in with the invited email.',
-  invalidToken: 'This invite link is invalid, expired, or has already been used.',
+  invalidToken:
+    'This invite link is invalid, expired, or has already been used.',
   unexpectedError:
     'We could not accept this invite right now. Please try again.',
 };

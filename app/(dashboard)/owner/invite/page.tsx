@@ -72,16 +72,23 @@ export default async function OwnerInvitePage() {
                 >
                   <div className="space-y-1">
                     <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                      {OWNER_INVITE_PAGE_MESSAGES.pendingInvitesSection.emailLabel}
+                      {
+                        OWNER_INVITE_PAGE_MESSAGES.pendingInvitesSection
+                          .emailLabel
+                      }
                     </p>
                     <code className="block rounded border bg-white px-2 py-1 text-xs">
                       {invite.invited_email ??
-                        OWNER_INVITE_PAGE_MESSAGES.pendingInvitesSection.missingEmail}
+                        OWNER_INVITE_PAGE_MESSAGES.pendingInvitesSection
+                          .missingEmail}
                     </code>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                      {OWNER_INVITE_PAGE_MESSAGES.pendingInvitesSection.linkLabel}
+                      {
+                        OWNER_INVITE_PAGE_MESSAGES.pendingInvitesSection
+                          .linkLabel
+                      }
                     </p>
                     <a
                       href={claimLink}
