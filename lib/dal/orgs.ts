@@ -49,6 +49,14 @@ export async function getOrgJoinCode(): Promise<string | null> {
     .single();
 
   if (orgError) {
+    console.error('getOrgJoinCode organizations query failed', {
+      userId: user.id,
+      accountOrgId: account.org_id,
+      message: orgError.message,
+      details: orgError.details,
+      hint: orgError.hint,
+      code: orgError.code,
+    });
     throw createOrgsError(ORGS_ERROR_MESSAGES.failedToLoadOrganization);
   }
 

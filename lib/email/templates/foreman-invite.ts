@@ -1,4 +1,4 @@
-import { FOREMAN_INVITE_EMAIL_MESSAGES } from '@/locales/lib/email/foreman-invite-locales';
+import { FOREMAN_INVITE_EMAIL_MESSAGES } from '@/locales/lib/email/templates/foreman-invite-locales';
 
 /**
  * Input values required to build the foreman invite email.
