@@ -4,10 +4,30 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 
+const INTERNAL_REDIRECT_PREFIX = '/';
+const PROTOCOL_RELATIVE_PREFIX = '//';
+
 // Shared return type for auth actions
 export type ActionState = {
   error?: string;
 } | null;
+
+/**
+ * Returns a safe internal redirect path from form data or null.
+ */
+function getSafeRedirectPath(formData: FormData): string | null {
+  const redirectTo = formData.get('redirect');
+
+  if (
+    typeof redirectTo !== 'string' ||
+    !redirectTo.startsWith(INTERNAL_REDIRECT_PREFIX) ||
+    redirectTo.startsWith(PROTOCOL_RELATIVE_PREFIX)
+  ) {
+    return null;
+  }
+
+  return redirectTo;
+}
 
 /**
  * Signup logic where anybody can signup
@@ -18,10 +38,8 @@ export async function signup(
   _prevState: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  // Create Supabase client on the server
   const supabase = await createClient();
 
-  // This the data payload for signup
   const data = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
@@ -33,10 +51,8 @@ export async function signup(
     },
   };
 
-  // Create the user in Supabase Auth
   const { error } = await supabase.auth.signUp(data);
 
-  // Return the error to the form if signup fails
   if (error) {
     return { error: error.message };
   }
@@ -44,8 +60,12 @@ export async function signup(
   // Refresh cached layout data after signup
   revalidatePath('/', 'layout');
 
-  // Redirect to the onboarding for org creation
-  redirect('/onboarding');
+  // If the user arrived from an invite link (/join/[token]), the page passes
+  // a ?redirect param through a hidden input so we send them back there after
+  // signup instead of always going to /onboarding.
+  const safeRedirect = getSafeRedirectPath(formData);
+
+  redirect(safeRedirect ?? '/onboarding');
 }
 
 /**
@@ -171,6 +191,7 @@ export async function signupCrew(
 
 /**
  * Logs in an existing user and redirects by role.
+ * If a redirect param is present in the form data, uses that instead.
  */
 export async function login(
   _prevState: ActionState,
@@ -192,6 +213,16 @@ export async function login(
   if (error) {
     return { error: error.message };
   }
+
+  // Refresh cached layout data after login
+  revalidatePath('/', 'layout');
+
+  // If the user arrived from an invite link (/join/[token]), the login page
+  // receives ?redirect via searchParams and passes it as a hidden input.
+  // We send them back there instead of the role-based dashboard.
+  const safeRedirect = getSafeRedirectPath(formData);
+
+  if (safeRedirect) redirect(safeRedirect);
 
   // Read the authenticated user after login
   const {
@@ -247,6 +278,7 @@ export async function logout() {
  * Redirects to the login page if no user is found.
  */
 export async function getAuthenticatedUser() {
+  // Read the currently signed-in user
   const supabase = await createClient();
 
   const {

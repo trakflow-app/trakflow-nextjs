@@ -9,9 +9,17 @@ import { login } from '@/lib/auth/actions';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
+ * Props for the LoginForm component.
+ */
+interface LoginFormProps {
+  /** Optional path to redirect to after successful login (e.g. /join/[token]). */
+  redirect?: string;
+}
+
+/**
  * Login form for authenticated user
  */
-export default function LoginForm() {
+export default function LoginForm({ redirect }: LoginFormProps) {
   /** * state: returns the { error: string } from your action
    * formAction: the optimized function to pass to the form
    * isPending: replaces your manual 'loading' state automatically
@@ -35,6 +43,10 @@ export default function LoginForm() {
           {state.error}
         </div>
       )}
+
+      {/* Carries the post-auth redirect destination into the server action
+          so the action can send the user back to their invite link. */}
+      {redirect && <input type="hidden" name="redirect" value={redirect} />}
 
       <div className="space-y-4">
         <div>

@@ -4,10 +4,20 @@ import Image from 'next/image';
 import { signupForm } from '@/locales/components/auth/signup-form-locales';
 
 /**
+ * Props for the signup page — searchParams used to preserve
+ * a post-auth redirect destination (e.g. /join/[token]).
+ */
+interface SignupPageProps {
+  searchParams: Promise<{ redirect?: string }>;
+}
+
+/**
  * This is the server side page of login form
  * where we call the login form component
  */
-export default function SignupPage() {
+export default async function SignupPage({ searchParams }: SignupPageProps) {
+  const { redirect } = await searchParams;
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
       <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-xl shadow-sm">
@@ -30,8 +40,14 @@ export default function SignupPage() {
 
         <p className="text-center text-sm text-gray-600">
           {signupForm.alreadyHaveAnAccount}{' '}
+          {/* Pass the redirect param back to login so it is not lost
+              if the user switches between signup and login. */}
           <Link
-            href="/login"
+            href={
+              redirect
+                ? `/login?redirect=${encodeURIComponent(redirect)}`
+                : '/login'
+            }
             className="font-medium text-blue-600 hover:underline"
           >
             {signupForm.loginLink}

@@ -38,6 +38,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+CLAUDE.local.md
+PROJECT.state.md
+PROJECT.decisions.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
