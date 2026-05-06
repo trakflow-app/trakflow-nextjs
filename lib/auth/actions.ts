@@ -69,6 +69,127 @@ export async function signup(
 }
 
 /**
+ * Foreman signup via invite token.
+ * Validates invite, creates user, marks invite as used, redirects to /foreman.
+ */
+export async function signupForeman(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createClient();
+
+  const fullName = formData.get('full_name') as string;
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const inviteToken = formData.get('invite_token') as string;
+
+  // Fetch invite details
+  const { data: inviteArray } = await supabase.rpc('get_invite_details', {
+    token_input: inviteToken,
+  });
+  const invite = inviteArray?.[0];
+
+  // Validate invite existence and email match
+  if (!invite?.is_valid || invite.invited_email !== email) {
+    return { error: 'Invalid or mismatched invite.' };
+  }
+
+  // Verify role is FOREMAN
+  if (invite.role !== 'FOREMAN') {
+    return {
+      error:
+        'This invite is for a worker role. Please use the worker signup link.',
+    };
+  }
+
+  // Create user in Supabase Auth with metadata
+  const { error: signupError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name: fullName,
+        role: 'FOREMAN',
+        organization_id: invite.org_id,
+      },
+    },
+  });
+
+  if (signupError) return { error: signupError.message };
+
+  // Claim the invite
+  const { error: rpcError } = await supabase.rpc('claim_org_invite', {
+    token: inviteToken,
+  });
+
+  if (rpcError) {
+    // If the email used doesn't match the manual invite email, this triggers.
+    console.error('Database Error:', rpcError.message);
+    return { error: rpcError.message }; // Show the real DB error
+  }
+
+  // Revalidate and redirect
+  revalidatePath('/', 'layout');
+  redirect('/foreman');
+}
+
+/**
+ * Crew signup with org code validation.
+ * Creates a user with role 'CREW' and associates with the org.
+ */
+export async function signupCrew(
+  _prevState: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const supabase = await createClient();
+
+  const fullName = formData.get('full_name') as string;
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const orgCode = formData.get('org_code') as string;
+  const orgId = formData.get('org_id') as string;
+
+  // We explicitly hardcode it to 'CREW' to prevent privilege escalation.
+  const ENFORCED_ROLE = 'CREW';
+
+  // Verify org code exists and get org ID using RPC function
+  const { data: verifiedOrgId, error: orgError } = await supabase.rpc(
+    'get_org_id_by_code',
+    { join_code_input: orgCode },
+  );
+
+  if (orgError || !verifiedOrgId) {
+    return { error: 'Invalid organization code.' };
+  }
+
+  // Ensure the org_id from form matches the verified one
+  if (orgId !== verifiedOrgId) {
+    return { error: 'Organization mismatch. Please try again.' };
+  }
+
+  // Create user in Supabase Auth with metadata
+  const { error: signupError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name: fullName,
+        role: ENFORCED_ROLE,
+        organization_id: orgId,
+      },
+    },
+  });
+
+  if (signupError) {
+    return { error: signupError.message };
+  }
+
+  // Revalidate and redirect
+  revalidatePath('/', 'layout');
+  redirect('/crew');
+}
+
+/**
  * Logs in an existing user and redirects by role.
  * If a redirect param is present in the form data, uses that instead.
  */
@@ -120,12 +241,18 @@ export async function login(
     role = account?.role as string | undefined;
   }
 
-  // Redirect user to the correct dashboard based on role
-  if (role === 'OWNER') redirect('/owner');
-  if (role === 'FOREMAN') redirect('/foreman');
-  if (role === 'CREW') redirect('/crew');
+  const roleRedirects: Record<string, string> = {
+    OWNER: '/owner',
+    FOREMAN: '/foreman',
+    CREW: '/crew',
+  };
 
-  // Fallback redirect if no role is found
+  if (role && roleRedirects[role]) {
+    revalidatePath('/', 'layout');
+    redirect(roleRedirects[role]);
+  }
+
+  // Fallback redirect
   redirect('/onboarding');
 }
 
@@ -190,4 +317,68 @@ export async function getAccount() {
 
   // Return the account record
   return account;
+}
+
+/**
+ * Verifies if the provided org code is valid.
+ * Returns { valid: true } if found, otherwise { valid: false }.
+ */
+export async function verifyOrgCode(
+  orgCode: string,
+): Promise<{ valid: boolean }> {
+  const supabase = await createClient();
+
+  // Call the database function that allows unauthenticated access
+  const { data, error } = await supabase.rpc('verify_org_code', {
+    join_code_input: orgCode.toUpperCase(),
+  });
+
+  return { valid: !!data && !error };
+}
+
+/**
+ * Validate foreman invite token and return invite details
+ */
+export async function validateForemanInviteToken(token: string) {
+  // Fetch invite from DB
+  const supabase = await createClient();
+
+  // Call the new RPC function we created in the migration
+  const { data, error } = await supabase.rpc('get_invite_details', {
+    token_input: token,
+  });
+
+  // RPC returns an array in Supabase JS, so we take the first item
+  const invite = data?.[0];
+
+  if (error || !invite || !invite.is_valid) {
+    console.error('Validation Error:', error || invite?.error_message);
+    return { error: invite?.error_message || 'Invite not found.' };
+  }
+
+  return {
+    email: invite.invited_email,
+    orgId: invite.org_id,
+    orgName: invite.org_name,
+  };
+}
+
+/**
+ * Fetches organization name by join code.
+ * Used during crew signup verification.
+ */
+export async function getOrgNameByCode(
+  orgCode: string,
+): Promise<{ name: string | null; error: string | null }> {
+  const supabase = await createClient();
+
+  const { data: name, error } = await supabase.rpc('get_org_name_by_code', {
+    join_code_input: orgCode,
+  });
+
+  if (error || !name) {
+    return { name: null, error: 'Failed to load organization details.' };
+  }
+
+  return { name, error: null };
 }

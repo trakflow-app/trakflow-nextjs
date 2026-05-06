@@ -5,7 +5,7 @@ import { PASSWORD_LENGTH } from '@/constants/components/auth/signup-form-constan
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { signup } from '@/lib/auth/actions';
+import { signup, signupCrew, signupForeman } from '@/lib/auth/actions';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
@@ -18,13 +18,31 @@ interface SignupFormProps {
 
 /**
  * Signup form for the new users
+ * @param orgCode and orgId Optional organization code for crew signup
  */
-export default function SignupForm({ redirect }: SignupFormProps) {
+export default function SignupForm({
+  orgCode,
+  orgId,
+  email,
+  inviteToken,
+}: {
+  orgCode?: string;
+  orgId?: string;
+  email?: string;
+  inviteToken?: string;
+}) {
+  /**
+   * Determine which action to use based on whether orgCode is provided.
+   * - If orgCode exists: use signupCrew (which assigns org_id and role)
+   * - If no orgCode: use signup (for OWNER/regular signup, user goes to onboarding)
+   */
+  const action = inviteToken ? signupForeman : orgCode ? signupCrew : signup;
+
   /**
    * useActionState to link the form to the server action.
    * 'state' will capture the { error: string } returned by the server.
    */
-  const [state, formAction, isPending] = useActionState(signup, null);
+  const [state, formAction, isPending] = useActionState(action, null);
 
   /** Local error state for client-side specific checks */
   const [clientError, setClientError] = useState<string | null>(null);
@@ -65,7 +83,6 @@ export default function SignupForm({ redirect }: SignupFormProps) {
     <form action={handleAction} className="space-y-6">
       {/* Carries the post-auth redirect destination into the server action
           so the action can send the user back to their invite link. */}
-      {redirect && <input type="hidden" name="redirect" value={redirect} />}
       {activeError && (
         <div
           role="alert"
@@ -97,8 +114,10 @@ export default function SignupForm({ redirect }: SignupFormProps) {
           required
           autoComplete="email"
           placeholder={signupForm.email.placeholder}
-          disabled={isPending}
+          disabled={!!email || isPending}
           className="pr-10"
+          value={email ?? undefined}
+          readOnly={!!email}
         />
       </div>
 
@@ -166,6 +185,14 @@ export default function SignupForm({ redirect }: SignupFormProps) {
           </button>
         </div>
       </div>
+
+      {/* Hidden fields for server actions */}
+      {email && <input type="hidden" name="email" value={email} />}
+      {inviteToken && (
+        <input type="hidden" name="invite_token" value={inviteToken} />
+      )}
+      {orgCode && <input type="hidden" name="org_code" value={orgCode} />}
+      {orgId && <input type="hidden" name="org_id" value={orgId} />}
 
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? signupForm.loading : signupForm.submitButton}

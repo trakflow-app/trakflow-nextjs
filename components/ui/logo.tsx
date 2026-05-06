@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 const BRAND_NAME = 'TrakFlow';
@@ -16,6 +17,9 @@ type LogoProps = {
   showText?: boolean;
 };
 
+/**
+ * Renders the TrakFlow logo with an optional home link.
+ */
 export function Logo({
   href,
   className,
@@ -24,12 +28,13 @@ export function Logo({
 }: LogoProps) {
   const content = (
     <div className={cn('flex items-center gap-2', className)}>
-      <img
+      <Image
         src={LOGO_SRC}
         alt={showText ? '' : LOGO_ALT}
         aria-hidden={showText}
         width={LOGO_WIDTH}
         height={LOGO_HEIGHT}
+        priority
         className={imageClassName}
       />
     </div>
