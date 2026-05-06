@@ -36,7 +36,7 @@ export default async function SignupPage({ searchParams }: SignupPageProps) {
           <p className="mt-2 text-gray-600">{signupForm.description}</p>
         </div>
 
-        <SignupForm redirect={redirect} />
+        <SignupForm />
 
         <p className="text-center text-sm text-gray-600">
           {signupForm.alreadyHaveAnAccount}{' '}
