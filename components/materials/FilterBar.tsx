@@ -1,13 +1,12 @@
-import React from 'react';
 import { SelectField } from '@/components/ui/select-field';
 import { Input } from '@/components/ui/input';
 
 type Props = {
   projects: string[];
   projectFilter: string | null;
-  onProjectChange: (val: string | null) => void;
+  onProjectChange: (value: string | null) => void;
   searchTerm: string;
-  onSearchChange: (val: string) => void;
+  onSearchChange: (value: string) => void;
 };
 
 export default function FilterBar({
@@ -18,15 +17,17 @@ export default function FilterBar({
   onSearchChange,
 }: Props) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-4 w-full">
+    <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center">
       <div className="w-full sm:w-60">
         <SelectField
           options={[
-            { label: 'All Projects', value: 'ALL' },
-            ...projects.map((p) => ({ label: p, value: p })),
+            { label: 'All Projects', value: '__all__' },
+            ...projects.map((project) => ({ label: project, value: project })),
           ]}
-          value={projectFilter ?? ''}
-          onChange={(v) => onProjectChange(v || null)}
+          value={projectFilter ?? '__all__'}
+          onChange={(value) =>
+            onProjectChange(value === '__all__' ? null : value)
+          }
           placeholder="Filter by Project"
         />
       </div>

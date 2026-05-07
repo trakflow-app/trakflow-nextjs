@@ -1,20 +1,58 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StatsGrid from '@/components/materials/StatsGrid';
 import FilterBar from '@/components/materials/FilterBar';
 import MaterialsTable from '@/components/materials/MaterialsTable';
-import materialsData from '@/components/materials/mockData';
+import {
+  fetchMaterials,
+  type MaterialUI,
+} from '@/app/services/materials-services';
+import { createClient } from '@/lib/supabase/client';
 
 export default function MaterialsPage() {
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [materials, setMaterials] = useState<MaterialUI[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadMaterials = async () => {
+      const supabase = createClient();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: account } = await supabase
+        .from('accounts')
+        .select('org_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!account?.org_id) {
+        setLoading(false);
+        return;
+      }
+
+      const data = await fetchMaterials(account.org_id, projectFilter);
+      setMaterials(data);
+      setLoading(false);
+    };
+
+    void loadMaterials();
+  }, [projectFilter]);
 
   const projects = useMemo(
-    () => Array.from(new Set(materialsData.map((m) => m.project))),
-    [],
+    () => Array.from(new Set(materials.map((m) => m.projectName))),
+    [materials],
   );
 
   /**
@@ -52,7 +90,7 @@ export default function MaterialsPage() {
       </div>
 
       <div className="space-y-6">
-        <StatsGrid materials={materialsData} />
+        <StatsGrid materials={materials} />
 
         <div className="flex items-center justify-between">
           <FilterBar
@@ -64,13 +102,15 @@ export default function MaterialsPage() {
           />
         </div>
 
-        <MaterialsTable
-          materials={materialsData}
-          projectFilter={projectFilter}
-          searchTerm={searchTerm}
-          onLogUsage={handleLogUsage}
-          onEdit={handleEdit}
-        />
+        {!loading && (
+          <MaterialsTable
+            materials={materials}
+            projectFilter={projectFilter}
+            searchTerm={searchTerm}
+            onLogUsage={handleLogUsage}
+            onEdit={handleEdit}
+          />
+        )}
       </div>
     </div>
   );

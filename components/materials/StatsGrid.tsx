@@ -2,22 +2,26 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Box, TrendingDown, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/numeric-formatting';
-import { Material } from './mockData';
+import { MaterialUI } from '@/app/services/materials-services';
 
-type Props = { materials: Material[] };
+type Props = { materials: MaterialUI[] };
 
 export default function StatsGrid({ materials }: Props) {
-  const totalMaterials = materials.length;
+  // const totalMaterials = materials.length;
+  const totalMaterials = materials.reduce(
+    (sum, material) => sum + material.quantity,
+    0,
+  );
   const inventoryValue = materials.reduce(
-    (acc, m) => acc + m.quantity * m.unitCost,
+    (sum, material) => sum + material.quantity * material.unitCost,
     0,
   );
   const lowStockCount = materials.filter(
-    (m) => m.quantity <= m.minQuantity,
+    (material) => material.quantity <= material.minQuantity,
   ).length;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
