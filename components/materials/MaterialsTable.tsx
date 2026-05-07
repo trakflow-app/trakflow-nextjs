@@ -10,7 +10,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/numeric-formatting';
-import { Material } from './mockData';
 import { Box, History, Edit2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { MaterialUI } from '@/app/services/materials-services';
 
