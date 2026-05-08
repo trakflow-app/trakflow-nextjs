@@ -22,19 +22,19 @@ export default function Home() {
           <div className="flex flex-col gap-4">
             <Link
               href="/login"
-              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium text-gray-800 hover:bg-tertiary"
+              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium mt-4 mb-4 text-gray-800 hover:bg-tertiary"
             >
               Log In
             </Link>
             <Link
               href="/signup"
-              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium text-gray-800 hover:bg-gray-50"
+              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium mb-4 text-gray-800 hover:bg-tertiary"
             >
               Sign Up
             </Link>
             <Link
               href="/signup/crew"
-              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium text-gray-800 hover:bg-gray-50"
+              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium mb-4 text-gray-800 hover:bg-tertiary"
             >
               Join as Crew (with code)
             </Link>

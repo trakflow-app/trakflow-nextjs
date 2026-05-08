@@ -24,7 +24,10 @@ export function Footer() {
           height={FOOTER_LOGO_SIZE}
           className="size-12 justify-self-center object-contain sm:justify-self-start"
         />
-        <p className="justify-self-center text-sm">{FOOTER_COPYRIGHT_TEXT}</p>
+        <p className="justify-self-center text-sm">
+          {new Date().getFullYear()} 
+          {FOOTER_COPYRIGHT_TEXT}
+        </p>
         <div className="flex flex-col gap-2 justify-self-center text-sm sm:justify-self-end sm:text-right">
           <p>{FOOTER_PRIVACY_POLICY_TEXT}</p>
           <p>{FOOTER_TERMS_TEXT}</p>
