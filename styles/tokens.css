@@ -71,8 +71,9 @@
   --sidebar-ring: var(--brand-secondary);
 
   /* Primitive Typography */
-  --font-family-brand: 'Google Sans', system-ui, sans-serif;
+  --font-family-brand: 'Google Sans', 'GoogleSans', system-ui, sans-serif;
   --font-family-sans: 'Inter', system-ui, sans-serif;
+  --font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   /* Font Sizes */
   --font-size-xs: 0.75rem; /* 12px */
   --font-size-sm: 0.875rem; /* 14px */

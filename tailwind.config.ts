@@ -7,9 +7,10 @@ const config: Config = {
         primary: 'var(--color-primary)',
         'text-primary': 'var(--color-text-primary)',
       },
-      fontFamily:{
-        sans: ['var(--font-google-sans)', 'sans-serif'],
-        mono: ['var(--font-inter)', 'monospace'],
+      fontFamily: {
+        sans: ['var(--font-family-sans)'],
+        heading: ['var(--font-family-brand)'],
+        mono: ['var(--font-family-mono)'],
       },
       spacing: {
         1: 'var(--space-1)',
