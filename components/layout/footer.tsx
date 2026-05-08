@@ -15,7 +15,7 @@ import {
  */
 export function Footer() {
   return (
-    <footer className="mt-auto bg-[var(--brand-primary)] text-[var(--brand-white)]">
+    <footer className="mt-auto bg-brand-primary text-brand-white">
       <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-6 px-6 py-8 text-center sm:grid-cols-3 lg:px-8">
         <AppImage
           src={FOOTER_LOGO_SRC}
