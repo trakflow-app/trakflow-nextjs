@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Table,
   TableHeader,
@@ -36,24 +36,26 @@ export default function MaterialsTable({
   onEdit,
 }: Props) {
   /**
-   * Filter Logic:
+   * Filter Logic: useMemo for large arrays
    * First, we narrow down the materials based on the active project
    * and the user's search query across name and project name.
    */
-  const rows = materials.filter((material) => {
-    // If a project is selected, exclude materials that don't match
-    if (projectFilter && material.projectName !== projectFilter) return false;
+  const rows = useMemo(() => {
+    return materials.filter((material) => {
+      // If a project is selected, exclude materials that don't match
+      if (projectFilter && material.projectName !== projectFilter) return false;
 
-    // If search term exists, check for matches in material name or project name
-    if (searchTerm) {
-      const q = searchTerm.toLowerCase();
-      return (
-        material.name.toLowerCase().includes(q) ||
-        material.projectName.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+      // If search term exists, check for matches in material name or project name
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        return (
+          material.name.toLowerCase().includes(q) ||
+          material.projectName.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [materials, projectFilter, searchTerm]);
 
   /**
    * Row Transformation:
