@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
 import { Database } from '@/lib/types/database.types';
 
-// 1. Define the UI type (what the component expects)
+// Define the UI type (what the component expects)
 export type MaterialUI = {
   id: string;
   name: string;
@@ -14,7 +14,7 @@ export type MaterialUI = {
   unit: string;
 };
 
-// 2. Define the exact shape Supabase returns from the JOIN
+// Define the exact shape Supabase returns from the JOIN
 type MaterialWithProject = Database['public']['Tables']['materials']['Row'] & {
   projects: { project_name: string } | null;
 };
