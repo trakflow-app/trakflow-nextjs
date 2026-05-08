@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/numeric-formatting';
 import { Box, History, Edit2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { MaterialUI } from '@/app/services/materials-services';
+import { materialsTable } from '@/locales/components/materials/materials-table-locales';
 
 type Props = {
   materials: MaterialUI[];
@@ -21,7 +22,8 @@ type Props = {
   onEdit: (id: string) => void;
 };
 
-const getStatusLabel = (isLow: boolean) => (isLow ? 'Low Stock' : 'In Stock');
+const getStatusLabel = (isLow: boolean) =>
+  isLow ? materialsTable.lowStock : materialsTable.inStock;
 
 export default function MaterialsTable({
   materials,
@@ -131,25 +133,25 @@ export default function MaterialsTable({
           <TableHeader className="bg-slate-50/50">
             <TableRow>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
-                Material
+                {materialsTable.materialHeader}
               </TableHead>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
-                Project
+                {materialsTable.projectHeader}
               </TableHead>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
-                Quantity
+                {materialsTable.quantityHeader}
               </TableHead>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
-                Unit Cost
+                {materialsTable.unitCostHeader}
               </TableHead>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
-                Total Value
+                {materialsTable.totalValueHeader}
               </TableHead>
               <TableHead className="w-[10%] text-center font-bold text-primary-600 px-4 py-3">
-                Status
+                {materialsTable.statusHeader}
               </TableHead>
               <TableHead className="w-[10%] text-right font-bold text-primary-600 px-4 py-3">
-                Actions
+                {materialsTable.actionsHeader}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -221,7 +223,7 @@ export default function MaterialsTable({
                         className="h-8 px-3 text-primary hover:bg-primary hover:text-primary-foreground active:scale-95 transition-all"
                       >
                         <History className="mr-2 h-3.5 w-3.5" />
-                        Log Usage
+                        {materialsTable.logUsageAction}
                       </Button>
                       <Button
                         onClick={() => onEdit(material.id)}
@@ -229,7 +231,7 @@ export default function MaterialsTable({
                         className="h-8 px-3 text-secondary hover:bg-secondary hover:text-secondary-foreground active:scale-95 transition-all"
                       >
                         <Edit2 className="mr-2 h-3.5 w-3.5" />
-                        Edit
+                        {materialsTable.editAction}
                       </Button>
                     </div>
                   </TableCell>
