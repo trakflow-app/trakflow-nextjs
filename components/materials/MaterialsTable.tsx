@@ -22,6 +22,9 @@ type Props = {
   onEdit: (id: string) => void;
 };
 
+/**
+ * Helper to determine status text based on inventory levels.
+ */
 const getStatusLabel = (isLow: boolean) =>
   isLow ? materialsTable.lowStock : materialsTable.inStock;
 
@@ -32,8 +35,16 @@ export default function MaterialsTable({
   onLogUsage,
   onEdit,
 }: Props) {
+  /**
+   * Filter Logic:
+   * First, we narrow down the materials based on the active project
+   * and the user's search query across name and project name.
+   */
   const rows = materials.filter((material) => {
+    // If a project is selected, exclude materials that don't match
     if (projectFilter && material.projectName !== projectFilter) return false;
+
+    // If search term exists, check for matches in material name or project name
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       return (
@@ -44,10 +55,19 @@ export default function MaterialsTable({
     return true;
   });
 
+  /**
+   * Row Transformation:
+   * Calculates derived values like total cost and inventory status.
+   * This is called inside your map() when rendering the table rows.
+   */
   const computeMaterialRow = (material: MaterialUI) => {
+    // Business Logic: Value calculation
     const totalValue = material.unitCost * material.quantity;
+
+    // Threshold Check: Determine if the item is running low
     const isLow = material.quantity <= material.minQuantity;
     const statusLabel = getStatusLabel(isLow);
+
     return { totalValue, isLow, statusLabel };
   };
 
