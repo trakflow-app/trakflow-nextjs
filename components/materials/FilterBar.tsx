@@ -1,5 +1,6 @@
 import { SelectField } from '@/components/ui/select-field';
 import { Input } from '@/components/ui/input';
+import { filterBar } from '@/locales/components/materials/filter-bar-locales';
 
 type Props = {
   projects: string[];
@@ -21,7 +22,7 @@ export default function FilterBar({
       <div className="w-full sm:w-60">
         <SelectField
           options={[
-            { label: 'All Projects', value: '__all__' },
+            { label: filterBar.allProjects, value: '__all__' },
             ...projects.map((project) => ({ label: project, value: project })),
           ]}
           value={projectFilter ?? '__all__'}
@@ -34,7 +35,8 @@ export default function FilterBar({
 
       <div className="flex-1">
         <Input
-          placeholder="Search materials..."
+          type="search"
+          placeholder={filterBar.placeHolderSearch}
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
         />

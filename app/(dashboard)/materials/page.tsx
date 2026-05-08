@@ -12,16 +12,27 @@ import {
 } from '@/app/services/materials-services';
 import { createClient } from '@/lib/supabase/client';
 
+/**
+ * MaterialsPage Component
+ * Manages the fetching, filtering, usage-material and editing materials.
+ */
 export default function MaterialsPage() {
+  /**
+   * State management
+   */
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [materials, setMaterials] = useState<MaterialUI[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Data fetching
+   */
   useEffect(() => {
     const loadMaterials = async () => {
       const supabase = createClient();
 
+      // Retrieve the authenticated user session
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -31,6 +42,7 @@ export default function MaterialsPage() {
         return;
       }
 
+      // Fetch the organization ID linked to the user's account
       const { data: account } = await supabase
         .from('accounts')
         .select('org_id')
@@ -42,32 +54,39 @@ export default function MaterialsPage() {
         return;
       }
 
-      const data = await fetchMaterials(account.org_id, projectFilter);
+      // API call to retrieve materials or the specific organizations
+      const data = await fetchMaterials(account.org_id);
       setMaterials(data);
       setLoading(false);
     };
 
     void loadMaterials();
-  }, [projectFilter]);
+  });
 
+  /**
+   * Extracts unique project names from the materials list for the FilterBar.
+   * Memoized to prevent recalculation on every re-render.
+   */
   const projects = useMemo(
     () => Array.from(new Set(materials.map((m) => m.projectName))),
     [materials],
   );
 
   /**
-   * TODO: Create the function for this and use modal
+   * Opens the interface to record material consumption.
+   * @param id - The unique identifier of the material.
    */
   const handleLogUsage = (id: string) => {
-    // placeholder — open modal or log usage flow
+    // TODO: Create the function for this and use modal
     console.log('Log usage', id);
   };
 
   /**
-   * TODO: Create the function for this and use modal
+   * Opens the material editor.
+   * @param id - The unique identifier of the material.
    */
   const handleEdit = (id: string) => {
-    // placeholder — open edit form
+    // TODO: Create the function for this and use modal
     console.log('Edit', id);
   };
 
