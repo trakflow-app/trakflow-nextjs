@@ -78,7 +78,7 @@ export default function MaterialsPage() {
    * @param id - The unique identifier of the material.
    */
   const handleLogUsage = (id: string) => {
-    // TODO: Create the function for this and use modal
+    // TODO [KAN-83]: Create the function for this and use modal
     console.log('Log usage', id);
   };
 
@@ -105,7 +105,7 @@ export default function MaterialsPage() {
 
         <div>
           <Button>
-            {/** TODO: Create the function for this one */}
+            {/** TODO [KAN-84]: Create the function for this one */}
             <Plus className="mr-2 h-4 w-4" /> {materialsPage.addMaterialButton}
           </Button>
         </div>
