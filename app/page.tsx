@@ -1,4 +1,11 @@
 'use client';
+import {
+  HOME_PAGE_CREW_SIGNUP_HREF,
+  HOME_PAGE_LOGIN_HREF,
+  HOME_PAGE_NAVIGATION_LINK_CLASS_NAME,
+  HOME_PAGE_PRIMARY_NAVIGATION_LINK_CLASS_NAME,
+  HOME_PAGE_SIGNUP_HREF,
+} from '@/constants/app/page-constants';
 import { HOME_PAGE_MESSAGES } from '@/locales/app/page-locales';
 import Link from 'next/link';
 
@@ -12,20 +19,20 @@ export default function Home() {
         <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
           <div className="flex flex-col gap-4">
             <Link
-              href="/login"
-              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium mt-4 mb-4 text-gray-800 hover:bg-tertiary"
+              href={HOME_PAGE_LOGIN_HREF}
+              className={HOME_PAGE_PRIMARY_NAVIGATION_LINK_CLASS_NAME}
             >
               {HOME_PAGE_MESSAGES.loginLink}
             </Link>
             <Link
-              href="/signup"
-              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium mb-4 text-gray-800 hover:bg-tertiary"
+              href={HOME_PAGE_SIGNUP_HREF}
+              className={HOME_PAGE_NAVIGATION_LINK_CLASS_NAME}
             >
               {HOME_PAGE_MESSAGES.signupLink}
             </Link>
             <Link
-              href="/signup/crew"
-              className="inline-flex h-15 w-75 items-center justify-center rounded-lg bg-white border border-brand-primary px-6 font-medium mb-4 text-gray-800 hover:bg-tertiary"
+              href={HOME_PAGE_CREW_SIGNUP_HREF}
+              className={HOME_PAGE_NAVIGATION_LINK_CLASS_NAME}
             >
               {HOME_PAGE_MESSAGES.crewSignupLink}
             </Link>
