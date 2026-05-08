@@ -25,7 +25,7 @@ export function Footer() {
           className="size-12 justify-self-center object-contain sm:justify-self-start"
         />
         <p className="justify-self-center text-sm">
-          {new Date().getFullYear()} 
+          {new Date().getFullYear()}
           {FOOTER_COPYRIGHT_TEXT}
         </p>
         <div className="flex flex-col gap-2 justify-self-center text-sm sm:justify-self-end sm:text-right">

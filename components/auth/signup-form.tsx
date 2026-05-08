@@ -9,14 +9,6 @@ import { signup, signupCrew, signupForeman } from '@/lib/auth/actions';
 import { Eye, EyeOff } from 'lucide-react';
 
 /**
- * Props for the SignupForm component.
- */
-interface SignupFormProps {
-  /** Optional path to redirect to after successful signup (e.g. /join/[token]). */
-  redirect?: string;
-}
-
-/**
  * Signup form for the new users
  * @param orgCode and orgId Optional organization code for crew signup
  */
