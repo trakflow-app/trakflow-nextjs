@@ -15,7 +15,7 @@ import {
  */
 export function Footer() {
   return (
-    <footer className="mt-auto bg-[var(--brand-primary)] text-[var(--brand-white)]">
+    <footer className="mt-auto bg-brand-primary text-brand-white">
       <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-6 px-6 py-8 text-center sm:grid-cols-3 lg:px-8">
         <AppImage
           src={FOOTER_LOGO_SRC}
@@ -24,7 +24,10 @@ export function Footer() {
           height={FOOTER_LOGO_SIZE}
           className="size-12 justify-self-center object-contain sm:justify-self-start"
         />
-        <p className="justify-self-center text-sm">{FOOTER_COPYRIGHT_TEXT}</p>
+        <p className="justify-self-center text-sm">
+          {new Date().getFullYear()}
+          {FOOTER_COPYRIGHT_TEXT}
+        </p>
         <div className="flex flex-col gap-2 justify-self-center text-sm sm:justify-self-end sm:text-right">
           <p>{FOOTER_PRIVACY_POLICY_TEXT}</p>
           <p>{FOOTER_TERMS_TEXT}</p>

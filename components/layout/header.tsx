@@ -8,7 +8,6 @@ import {
   HEADER_AVATAR_METADATA_KEYS,
   HEADER_HOME_HREF,
   HEADER_INNER_CLASS_NAME,
-  HEADER_SHELL_CLASS_NAME,
 } from '@/constants/components/layout/header-constants';
 import { HEADER_GUEST_USER_LABEL } from '@/locales/components/layout/header-locales';
 import { createClient } from '@/lib/supabase/server';

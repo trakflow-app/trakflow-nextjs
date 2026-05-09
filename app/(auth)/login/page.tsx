@@ -1,6 +1,6 @@
 import LoginForm from '@/components/auth/login-form';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Logo } from '@/components/ui/logo';
 import { loginForm } from '@/locales/components/auth/login-form-locales';
 
 /**
@@ -23,14 +23,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <div className="w-full max-w-md space-y-8 p-8 bg-white rounded-xl shadow-sm">
         <div className="text-center flex flex-col items-center">
           {/* Logo */}
-          <Image
-            src="/trakflow-logo.png"
-            alt="TrakFlow logo"
-            width={500}
-            height={100}
-            priority
-            className="w-auto h-auto"
-          />
+          <Logo />
           <h1 className="text-3xl font-bold">{loginForm.title}</h1>
           <p className="mt-2 text-gray-600">{loginForm.description}</p>
         </div>
