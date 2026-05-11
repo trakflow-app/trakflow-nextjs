@@ -12,6 +12,7 @@ import {
 } from '@/app/services/materials-services';
 import { createClient } from '@/lib/supabase/client';
 import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
+import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';
 
 /**
  * MaterialsPage Component
@@ -25,6 +26,12 @@ export default function MaterialsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [materials, setMaterials] = useState<MaterialUI[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modal state for material usage logging
+  const [usageModalOpen, setUsageModalOpen] = useState(false);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(
+    null,
+  );
 
   /**
    * Data fetching
@@ -62,7 +69,7 @@ export default function MaterialsPage() {
     };
 
     void loadMaterials();
-  });
+  }, []);
 
   /**
    * Extracts unique project names from the materials list for the FilterBar.
@@ -78,8 +85,53 @@ export default function MaterialsPage() {
    * @param id - The unique identifier of the material.
    */
   const handleLogUsage = (id: string) => {
-    // TODO [KAN-83]: Create the function for this and use modal
-    console.log('Log usage', id);
+    setSelectedMaterialId(id);
+    setUsageModalOpen(true);
+  };
+
+  /**
+   * Closes the material usage logging modal.
+   */
+  const handleCloseUsageModal = () => {
+    setUsageModalOpen(false);
+    setSelectedMaterialId(null);
+  };
+
+  /**
+   * Callback when material usage is successfully logged.
+   * Updates the local state to reflect the deduction immediately.
+   */
+  const handleUsageSubmitSuccess = (data: {
+    materialId: string;
+    projectId: string;
+    quantityUsed: number;
+    notes?: string | null | undefined;
+  }) => {
+    if (!selectedMaterialId) return;
+
+    console.log('Deducting from ID:', data.materialId);
+    console.log(
+      'Current Materials IDs:',
+      materials.map((m) => m.id),
+    );
+
+    setMaterials((prevMaterials) =>
+      prevMaterials.map((material) => {
+        if (material.id === data.materialId) {
+          const newQuantity = Math.max(
+            0,
+            material.quantity - data.quantityUsed,
+          );
+          return {
+            ...material,
+            quantity: newQuantity,
+            // Recalculate total value so stats grid stays accurate
+            totalValue: newQuantity * material.unitCost,
+          };
+        }
+        return material;
+      }),
+    );
   };
 
   /**
@@ -89,6 +141,14 @@ export default function MaterialsPage() {
   const handleEdit = (id: string) => {
     // TODO: Create the function for this and use modal
     console.log('Edit', id);
+  };
+
+  /**
+   * Opens the add material modal.
+   */
+  const handleAddMaterial = () => {
+    // TODO [KAN-84]: Implement add material modal
+    console.log('Add new material');
   };
 
   return (
@@ -104,7 +164,7 @@ export default function MaterialsPage() {
         </div>
 
         <div>
-          <Button>
+          <Button onClick={handleAddMaterial}>
             {/** TODO [KAN-84]: Create the function for this one */}
             <Plus className="mr-2 h-4 w-4" /> {materialsPage.addMaterialButton}
           </Button>
@@ -134,6 +194,15 @@ export default function MaterialsPage() {
           />
         )}
       </div>
+
+      {/* Material Usage Logging Modal */}
+      <MaterialUsageModal
+        isOpen={usageModalOpen}
+        onClose={handleCloseUsageModal}
+        materialId={selectedMaterialId}
+        materials={materials}
+        onSubmitSuccess={handleUsageSubmitSuccess}
+      />
     </div>
   );
 }
