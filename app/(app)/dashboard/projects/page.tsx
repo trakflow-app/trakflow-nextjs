@@ -3,12 +3,9 @@
 import { useState } from 'react';
 import {
   Plus,
-  Edit2,
-  Trash2,
   Calendar,
   DollarSign,
   Building2,
-  Eye,
   FolderOpen,
 } from 'lucide-react';
 
@@ -25,9 +22,6 @@ const PAGE_DESCRIPTION = 'Manage your construction projects';
 const NEW_PROJECT_BUTTON = 'New Project';
 const SEARCH_PLACEHOLDER = 'Search projects...';
 const FILTER_PLACEHOLDER = 'Filter by status';
-const VIEW_BUTTON = 'View';
-const EDIT_BUTTON = 'Edit';
-const DELETE_BUTTON = 'Delete';
 const BUDGET_LABEL = 'Budget:';
 const EMPTY_TITLE = 'No projects found';
 const EMPTY_DESCRIPTION =
@@ -158,32 +152,9 @@ interface ProjectCardProps {
 /**
  * Card displaying a single project's key info and action buttons.
  */
-function ProjectCard({ project, onView, onEdit, onDelete }: ProjectCardProps) {
+function ProjectCard({ project }: ProjectCardProps) {
   return (
-    <Card
-      title={project.name}
-      action={
-        <div className="flex w-full gap-2 border-t pt-4">
-          <Button variant="ghost" size="sm" className="flex-1" onClick={onView}>
-            <Eye />
-            {VIEW_BUTTON}
-          </Button>
-          <Button variant="ghost" size="sm" className="flex-1" onClick={onEdit}>
-            <Edit2 />
-            {EDIT_BUTTON}
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            className="flex-1"
-            onClick={onDelete}
-          >
-            <Trash2 />
-            {DELETE_BUTTON}
-          </Button>
-        </div>
-      }
-    >
+    <Card title={project.name}>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center rounded-lg bg-muted p-2">
