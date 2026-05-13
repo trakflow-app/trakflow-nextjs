@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/numeric-formatting';
 import { Box, History, Edit2, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { MaterialUI } from '@/app/services/materials-services';
+import { MaterialUI } from '@/lib/dal/materials';
 import { materialsTable } from '@/locales/components/materials/materials-table-locales';
 
 type Props = {
