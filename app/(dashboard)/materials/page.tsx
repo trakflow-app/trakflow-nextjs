@@ -6,10 +6,7 @@ import { Button } from '@/components/ui/button';
 import StatsGrid from '@/components/materials/StatsGrid';
 import FilterBar from '@/components/materials/FilterBar';
 import MaterialsTable from '@/components/materials/MaterialsTable';
-import {
-  fetchMaterials,
-  type MaterialUI,
-} from '@/app/services/materials-services';
+import { fetchMaterials, type MaterialUI } from '@/lib/dal/materials';
 import { createClient } from '@/lib/supabase/client';
 import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
 import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';

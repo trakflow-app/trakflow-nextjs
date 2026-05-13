@@ -10,13 +10,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { MaterialUsageForm } from './MaterialUsageForm';
-import {
-  logMaterialUsageAction,
-  type MaterialUI,
-} from '@/app/services/materials-services';
+import { logMaterialUsageAction } from '@/app/services/materials-services';
 import { MaterialUsageSubmitData } from '@/lib/types/materials-types';
 import { materialUsageModalLocales } from '@/locales/components/materials/materials-usage-modal-locales';
-
+import { type MaterialUI } from '@/lib/dal/materials';
 interface MaterialUsageModalProps {
   isOpen: boolean;
   onClose: () => void;
