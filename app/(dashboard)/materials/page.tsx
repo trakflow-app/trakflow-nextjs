@@ -26,6 +26,7 @@ export default function MaterialsPage() {
 
   // Modal state for material usage logging
   const [usageModalOpen, setUsageModalOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(
     null,
   );
@@ -144,8 +145,7 @@ export default function MaterialsPage() {
    * Opens the add material modal.
    */
   const handleAddMaterial = () => {
-    // TODO [KAN-84]: Implement add material modal
-    console.log('Add new material');
+    setAddModalOpen(true);
   };
 
   return (
@@ -162,7 +162,6 @@ export default function MaterialsPage() {
 
         <div>
           <Button onClick={handleAddMaterial}>
-            {/** TODO [KAN-84]: Create the function for this one */}
             <Plus className="mr-2 h-4 w-4" /> {materialsPage.addMaterialButton}
           </Button>
         </div>
