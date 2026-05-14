@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StatsGrid from '@/components/materials/StatsGrid';
@@ -38,7 +38,7 @@ export default function MaterialsPage() {
   /**
    * Data fetching
    */
-  const loadMaterials = async () => {
+  const loadMaterials = useCallback(async () => {
     const supabase = createClient();
 
     // Retrieve the authenticated user session
@@ -68,11 +68,13 @@ export default function MaterialsPage() {
     setMaterials(data);
     setLoading(false);
     setOrgId(account.org_id);
-  };
+  }, []);
 
   useEffect(() => {
-    void loadMaterials();
-  }, []);
+    queueMicrotask(() => {
+      void loadMaterials();
+    });
+  }, [loadMaterials]);
 
   /**
    * Extracts unique project names from the materials list for the FilterBar.
@@ -211,7 +213,6 @@ export default function MaterialsPage() {
         orgId={orgId}
         onSubmitSuccess={loadMaterials}
       />
-
     </div>
   );
 }
