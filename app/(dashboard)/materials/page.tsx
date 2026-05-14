@@ -38,39 +38,39 @@ export default function MaterialsPage() {
   /**
    * Data fetching
    */
-  useEffect(() => {
-    const loadMaterials = async () => {
-      const supabase = createClient();
+  const loadMaterials = async () => {
+    const supabase = createClient();
 
-      // Retrieve the authenticated user session
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    // Retrieve the authenticated user session
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      // Fetch the organization ID linked to the user's account
-      const { data: account } = await supabase
-        .from('accounts')
-        .select('org_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!account?.org_id) {
-        setLoading(false);
-        return;
-      }
-
-      // API call to retrieve materials or the specific organizations
-      const data = await fetchMaterials(account.org_id);
-      setMaterials(data);
+    if (!user) {
       setLoading(false);
-      setOrgId(account.org_id);
-    };
+      return;
+    }
 
+    // Fetch the organization ID linked to the user's account
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('org_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!account?.org_id) {
+      setLoading(false);
+      return;
+    }
+
+    // API call to retrieve materials or the specific organizations
+    const data = await fetchMaterials(account.org_id);
+    setMaterials(data);
+    setLoading(false);
+    setOrgId(account.org_id);
+  };
+
+  useEffect(() => {
     void loadMaterials();
   }, []);
 
@@ -209,7 +209,9 @@ export default function MaterialsPage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         orgId={orgId}
+        onSubmitSuccess={loadMaterials}
       />
+
     </div>
   );
 }

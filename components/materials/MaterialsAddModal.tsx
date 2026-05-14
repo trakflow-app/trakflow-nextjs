@@ -9,11 +9,16 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
+import { createMaterialAction } from '@/app/services/materials-services';
+
+
 interface MaterialsAddModalProps {
     isOpen: boolean;
     onClose: () => void;
     orgId: string | null;
+    onSubmitSuccess?: () => void;
 }
+
 type AddMaterialFormData = {
     name: string;
     projectId: string;
@@ -22,7 +27,12 @@ type AddMaterialFormData = {
     lowStockThreshold: number;
 };
 
-export function MaterialsAddModal({ isOpen, onClose, orgId }: MaterialsAddModalProps) {
+export function MaterialsAddModal({
+    isOpen,
+    onClose,
+    orgId,
+    onSubmitSuccess,
+}: MaterialsAddModalProps) {
     const canCreateMaterial = !!orgId;
     const [formData, setFormData] = useState<AddMaterialFormData>({
         name: '',
@@ -31,6 +41,9 @@ export function MaterialsAddModal({ isOpen, onClose, orgId }: MaterialsAddModalP
         unitCost: 0,
         lowStockThreshold: 0,
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
 
     const handleInputChange = (
         field: keyof AddMaterialFormData,
@@ -42,11 +55,31 @@ export function MaterialsAddModal({ isOpen, onClose, orgId }: MaterialsAddModalP
         }));
     }
 
-    const handleSubmit = () => {
-        console.log('Submit material:', {
-            ...formData,
-            orgId,
-        });
+    const handleSubmit = async () => {
+        if (!orgId) return;
+
+        setError(null);
+        setIsSubmitting(true);
+
+        try {
+            await createMaterialAction({
+                orgId,
+                name: formData.name,
+                projectId: formData.projectId || null,
+                quantity: formData.quantity,
+                unitCost: formData.unitCost,
+                lowStockThreshold: formData.lowStockThreshold,
+            });
+            onSubmitSuccess?.();
+            onClose();
+        } catch (err) {
+            const message =
+                err instanceof Error ? err.message : 'Failed to create material';
+
+            setError(message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -57,6 +90,12 @@ export function MaterialsAddModal({ isOpen, onClose, orgId }: MaterialsAddModalP
                     <DialogDescription>
                         {canCreateMaterial ? (
                             <>
+                                {error && (
+                                    <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+                                        {error}
+                                    </div>
+                                )}
+
                                 <div className="flex flex-col gap-2 mb-4">
                                     <label htmlFor='material-name'>Material Name</label>
                                     <Input
@@ -106,9 +145,10 @@ export function MaterialsAddModal({ isOpen, onClose, orgId }: MaterialsAddModalP
                                         />
                                     </div>
                                 </div>
+
                                 <div className="flex justify-end mt-4">
-                                    <Button type="button" onClick={handleSubmit}>
-                                        Add Material
+                                    <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
+                                        {isSubmitting ? 'Adding...' : 'Add Material'}
                                     </Button>
                                 </div>
 
