@@ -1,4 +1,36 @@
-import { createClient } from '@/lib/supabase/client';
+'use server';
+
+import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
+import { type Database } from '@/lib/types/database.types';
+
+const MATERIAL_SERVICE_ERRORS = {
+  missingServerConfig: 'Missing Supabase server configuration',
+  notAuthenticated: 'You must be signed in to manage materials',
+  accountNotFound: 'Account details could not be loaded',
+  permissionDenied: 'You do not have permission to manage materials',
+};
+
+const MATERIAL_MANAGER_ROLES = ['OWNER', 'FOREMAN'];
+
+/**
+ * Creates a Supabase admin client for server-side material writes.
+ */
+function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.missingServerConfig);
+  }
+
+  return createSupabaseAdminClient<Database>(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
 
 /**
  * Function that record the log consumption of the materials
@@ -9,7 +41,7 @@ export async function logMaterialUsageAction(params: {
   quantityUsed: number;
   notes?: string;
 }) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Call the Postgres function defined in your schema
   const { data, error } = await supabase.rpc('log_material_usage', {
@@ -34,9 +66,38 @@ export async function createMaterialAction(params: {
   unitCost: number;
   lowStockThreshold: number;
 }) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.notAuthenticated);
+  }
+
+  const { data: account, error: accountError } = await supabase
+    .from('accounts')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (accountError || !account?.org_id || !account?.role) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
+  }
+
+  const canManageMaterials =
+    account.org_id === params.orgId &&
+    MATERIAL_MANAGER_ROLES.includes(account.role);
+
+  if (!canManageMaterials) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
+  }
+
+  const adminSupabase = createAdminClient();
+
+  const { data, error } = await adminSupabase
     .from('materials')
     .insert({
       org_id: params.orgId,
@@ -53,4 +114,3 @@ export async function createMaterialAction(params: {
 
   return data;
 }
-
