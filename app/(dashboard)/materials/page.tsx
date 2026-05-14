@@ -10,6 +10,7 @@ import { fetchMaterials, type MaterialUI } from '@/lib/dal/materials';
 import { createClient } from '@/lib/supabase/client';
 import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
 import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';
+import { MaterialsAddModal } from '@/components/materials/MaterialsAddModal';
 
 /**
  * MaterialsPage Component
@@ -23,13 +24,16 @@ export default function MaterialsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [materials, setMaterials] = useState<MaterialUI[]>([]);
   const [loading, setLoading] = useState(true);
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   // Modal state for material usage logging
   const [usageModalOpen, setUsageModalOpen] = useState(false);
-  const [addModalOpen, setAddModalOpen] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(
     null,
   );
+
+  // Modal state for adding new material
+  const [addModalOpen, setAddModalOpen] = useState(false);
 
   /**
    * Data fetching
@@ -64,6 +68,7 @@ export default function MaterialsPage() {
       const data = await fetchMaterials(account.org_id);
       setMaterials(data);
       setLoading(false);
+      setOrgId(account.org_id);
     };
 
     void loadMaterials();
@@ -198,6 +203,12 @@ export default function MaterialsPage() {
         materialId={selectedMaterialId}
         materials={materials}
         onSubmitSuccess={handleUsageSubmitSuccess}
+      />
+      {/* Material Add Modal */}
+      <MaterialsAddModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        orgId={orgId}
       />
     </div>
   );
