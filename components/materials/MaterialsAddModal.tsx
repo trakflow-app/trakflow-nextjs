@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -6,6 +6,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface MaterialsAddModalProps {
     isOpen: boolean;
@@ -30,6 +32,23 @@ export function MaterialsAddModal({ isOpen, onClose, orgId }: MaterialsAddModalP
         lowStockThreshold: 0,
     });
 
+    const handleInputChange = (
+        field: keyof AddMaterialFormData,
+        value: string | number,
+    ) => {
+        setFormData((currentFormData) => ({
+            ...currentFormData,
+            [field]: value,
+        }));
+    }
+
+    const handleSubmit = () => {
+        console.log('Submit material:', {
+            ...formData,
+            orgId,
+        });
+    };
+
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent>
@@ -37,14 +56,69 @@ export function MaterialsAddModal({ isOpen, onClose, orgId }: MaterialsAddModalP
                     <DialogTitle>Add Material</DialogTitle>
                     <DialogDescription>
                         {canCreateMaterial ? (
-                            <div>
-                                Form goes here
-                            </div>
+                            <>
+                                <div className="flex flex-col gap-2 mb-4">
+                                    <label htmlFor='material-name'>Material Name</label>
+                                    <Input
+                                        id="material-name"
+                                        value={formData.name}
+                                        onChange={(e) => handleInputChange('name', e.target.value)}
+                                        placeholder="Concrete, lumber, screws..."
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="material-quantity">Quantity</label>
+                                        <Input
+                                            id="material-quantity"
+                                            type="number"
+                                            value={formData.quantity}
+                                            onChange={(e) =>
+                                                handleInputChange('quantity', Number(e.target.value))
+                                            }
+                                            placeholder="0"
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="material-unit-cost">Unit Cost</label>
+                                        <Input
+                                            id="material-unit-cost"
+                                            type="number"
+                                            value={formData.unitCost}
+                                            onChange={(e) =>
+                                                handleInputChange('unitCost', Number(e.target.value))
+                                            }
+                                            placeholder="0"
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="material-low-stock">Low Stock</label>
+                                        <Input
+                                            id="material-low-stock"
+                                            type="number"
+                                            value={formData.lowStockThreshold}
+                                            onChange={(e) =>
+                                                handleInputChange('lowStockThreshold', Number(e.target.value))
+                                            }
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end mt-4">
+                                    <Button type="button" onClick={handleSubmit}>
+                                        Add Material
+                                    </Button>
+                                </div>
+
+                            </>
                         ) : (
                             <div>
                                 Loading organization information... Please wait.
                             </div>
                         )}
+
                     </DialogDescription>
                 </DialogHeader>
             </DialogContent>
