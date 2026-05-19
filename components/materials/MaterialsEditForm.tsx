@@ -13,28 +13,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
-// TODO: Create this validation schema
 import {
   editMaterialSchema,
   EditMaterialFormInput,
 } from '@/lib/validations/materials-validations';
 import { MaterialUI } from '@/lib/dal/materials';
-
-// Locales for labels and placeholders
-const locales = {
-  materialNameLabel: 'Material Name',
-  materialNamePlaceholder: 'e.g., Drywall Sheets',
-  quantityLabel: 'Quantity on Hand',
-  unitLabel: 'Unit of Measure',
-  unitPlaceholder: 'e.g., sheets, bags, gallons',
-  unitCostLabel: 'Cost per Unit',
-  minQuantityLabel: 'Low Stock Threshold',
-  updateButton: 'Update Material',
-  updatingButton: 'Updating...',
-};
+import { materialEditFormLocales } from '@/locales/components/materials/materials-edit-form-locales';
 
 interface MaterialEditFormProps {
-  material: MaterialUI;
+  material: MaterialUI & { id: string | number };
   onSubmit: SubmitHandler<EditMaterialFormInput>;
   isSubmitting: boolean;
 }
@@ -49,7 +36,6 @@ export function MaterialEditForm({
     defaultValues: {
       name: material.name || '',
       quantity: material.quantity || 0,
-      unit: material.unit || '',
       unitCost: material.unitCost || 0,
       minQuantity: material.minQuantity || 0,
     },
@@ -60,7 +46,6 @@ export function MaterialEditForm({
     form.reset({
       name: material.name,
       quantity: material.quantity,
-      unit: material.unit,
       unitCost: material.unitCost,
       minQuantity: material.minQuantity,
     });
@@ -69,15 +54,22 @@ export function MaterialEditForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          {materialEditFormLocales.projectContextPrefix}{' '}
+          <span className="font-medium text-foreground">
+            {material.projectName || materialEditFormLocales.projectFallback}
+          </span>
+          .
+        </p>
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{locales.materialNameLabel}</FormLabel>
+              <FormLabel>{materialEditFormLocales.materialNameLabel}</FormLabel>
               <FormControl>
                 <Input
-                  placeholder={locales.materialNamePlaceholder}
+                  placeholder={materialEditFormLocales.materialNamePlaceholder}
                   {...field}
                   disabled={isSubmitting}
                 />
@@ -93,30 +85,13 @@ export function MaterialEditForm({
             name="quantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{locales.quantityLabel}</FormLabel>
+                <FormLabel>{materialEditFormLocales.quantityLabel}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
                     {...field}
                     disabled={isSubmitting}
                     onChange={(e) => field.onChange(Number(e.target.value))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="unit"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{locales.unitLabel}</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder={locales.unitPlaceholder}
-                    {...field}
-                    disabled={isSubmitting}
                   />
                 </FormControl>
                 <FormMessage />
@@ -131,7 +106,7 @@ export function MaterialEditForm({
             name="unitCost"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{locales.unitCostLabel}</FormLabel>
+                <FormLabel>{materialEditFormLocales.unitCostLabel}</FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -150,7 +125,9 @@ export function MaterialEditForm({
             name="minQuantity"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{locales.minQuantityLabel}</FormLabel>
+                <FormLabel>
+                  {materialEditFormLocales.minQuantityLabel}
+                </FormLabel>
                 <FormControl>
                   <Input
                     type="number"
@@ -167,7 +144,9 @@ export function MaterialEditForm({
 
         <div className="flex justify-end pt-4">
           <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? locales.updatingButton : locales.updateButton}
+            {isSubmitting
+              ? materialEditFormLocales.updatingButton
+              : materialEditFormLocales.updateButton}
           </Button>
         </div>
       </form>

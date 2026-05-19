@@ -10,9 +10,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { MaterialEditForm } from '@/components/materials/MaterialsEditForm';
-import { updateMaterialAction } from '@/app/services/materials-services'; // You will create this next
-import { EditMaterialFormOutput } from '@/lib/validations/materials-validations';
 import { type MaterialUI } from '@/lib/dal/materials';
+import { EditMaterialFormInput } from '@/lib/validations/materials-validations';
+import { updateMaterialAction } from '@/app/services/materials-services';
+import { materialEditModalLocales } from '@/locales/components/materials/materials-edit-modal-locales';
 
 interface MaterialEditModalProps {
   isOpen: boolean;
@@ -46,7 +47,7 @@ export function MaterialEditModal({
    * Handle form submission
    * Sends updated data to the backend and manages UI state.
    */
-  const handleSubmit: SubmitHandler<EditMaterialFormOutput> = async (data) => {
+  const handleSubmit: SubmitHandler<EditMaterialFormInput> = async (data) => {
     if (!material) {
       setError('No material selected for editing.');
       return;
@@ -70,7 +71,9 @@ export function MaterialEditModal({
       onClose(); // Close modal on success
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'Failed to update material.';
+        err instanceof Error
+          ? err.message
+          : materialEditModalLocales.failedToEditMaterial;
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -81,11 +84,11 @@ export function MaterialEditModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Material</DialogTitle>
+          <DialogTitle>{materialEditModalLocales.title}</DialogTitle>
           <DialogDescription>
             {material
-              ? `Update the details for ${material.name}.`
-              : 'Loading material details...'}
+              ? materialEditModalLocales.descriptionWithMaterial(material.name)
+              : materialEditModalLocales.loading}
           </DialogDescription>
         </DialogHeader>
 
@@ -95,7 +98,7 @@ export function MaterialEditModal({
           </div>
         )}
 
-        <div className="mt-4">
+        <div>
           {material ? (
             <MaterialEditForm
               material={material}
@@ -104,7 +107,7 @@ export function MaterialEditModal({
             />
           ) : (
             <div className="py-4 text-center text-sm text-muted-foreground">
-              Loading...
+              {materialEditModalLocales.loading}
             </div>
           )}
         </div>
