@@ -20,6 +20,7 @@ TrakFlow is a full-stack Next.js app for construction teams to track tools, mate
 | Notifications     | `sonner`                                             | Toast and notification UI                     |
 | Data/Grid UI      | `@tanstack/react-table`                              | Table rendering and state                     |
 | Backend Platform  | Supabase                                             | Postgres, Auth, Storage, and SQL migrations   |
+| Email             | Resend                                               | Transactional foreman invite emails           |
 | Deployment Target | Vercel                                               | Aligned with the Next.js app model            |
 
 ## Tooling
@@ -51,7 +52,19 @@ The repo follows the structure defined in `AGENTS.md`.
 - Local development uses `.env.local` derived from `.env.example`.
 - Supabase is the active backend service for database access, auth, and storage.
 - Hosted bootstrap support exists for shared dev data through `scripts/bootstrap-hosted-dev.mjs`.
+- Resend is used for outbound foreman invite email through `lib/email/resend.ts`.
 - SQL migrations are maintained under `supabase/migrations/`.
+
+## Current App Areas
+
+| Area            | Current state                                                                 |
+| --------------- | ----------------------------------------------------------------------------- |
+| Auth            | Signup, login, logout, invite-aware redirects, and role-based login redirects |
+| User management | Owner foreman invites, invite claim flow, and join-code display               |
+| Projects        | Search/filter UI with mock project data and placeholder action handlers       |
+| Materials       | Materials page, service layer, stats, filtering, and table UI                 |
+| Shared layout   | Header, navigation, footer, logo, and global app styling                      |
+| Hosted dev data | Shared org, users, projects, and tools via hosted bootstrap script            |
 
 ## Available Scripts
 
