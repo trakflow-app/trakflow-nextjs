@@ -35,6 +35,7 @@ export const TOOLS_CARD_TEXT = {
 export const TOOL_DETAILS_TEXT = {
   title: 'Tool Details',
   description: 'Review the current tool record.',
+  backButton: 'Back to Tools',
   closeButton: 'Close',
   tagLabel: 'Tag',
   nameLabel: 'Name',

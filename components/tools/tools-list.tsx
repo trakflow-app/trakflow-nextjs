@@ -105,7 +105,6 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
   const [pageSize, setPageSize] = useState<number>(
     TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE,
   );
-  const [selectedTool, setSelectedTool] = useState<ToolRow | null>(null);
   const [toolToEdit, setToolToEdit] = useState<ToolRow | null>(null);
   const [toolToDelete, setToolToDelete] = useState<ToolRow | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -247,9 +246,6 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
       ...currentOverrides,
       [updatedTool.id]: updatedTool,
     }));
-    setSelectedTool((tool) =>
-      tool?.id === updatedTool.id ? updatedTool : tool,
-    );
     setToolToEdit(null);
     router.refresh();
   }
@@ -264,7 +260,6 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
       nextToolIds.add(toolId);
       return nextToolIds;
     });
-    setSelectedTool((tool) => (tool?.id === toolId ? null : tool));
     setToolToDelete(null);
     router.refresh();
   }
@@ -318,7 +313,7 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
               <ToolCard
                 key={tool.id}
                 tool={tool}
-                onView={() => setSelectedTool(tool)}
+                onView={() => router.push(`/tools/${tool.id}`)}
                 onEdit={() => setToolToEdit(tool)}
                 onDelete={() => setToolToDelete(tool)}
               />
@@ -376,20 +371,6 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
         </div>
       )}
 
-      <ToolDetailsDialog
-        tool={selectedTool}
-        onEdit={(tool) => {
-          setSelectedTool(null);
-          setToolToEdit(tool);
-        }}
-        onDelete={(tool) => {
-          setSelectedTool(null);
-          setToolToDelete(tool);
-        }}
-        onOpenChange={(open) => {
-          if (!open) setSelectedTool(null);
-        }}
-      />
       <ToolEditDialog
         tool={toolToEdit}
         projects={projects}
@@ -520,113 +501,6 @@ function ToolImage({ tool }: ToolImageProps) {
           {TOOL_DETAILS_TEXT.noImageLabel}
         </span>
       </div>
-    </div>
-  );
-}
-
-type ToolDetailsDialogProps = {
-  tool: ToolRow | null;
-  onEdit: (tool: ToolRow) => void;
-  onDelete: (tool: ToolRow) => void;
-  onOpenChange: (open: boolean) => void;
-};
-
-function ToolDetailsDialog({
-  tool,
-  onEdit,
-  onDelete,
-  onOpenChange,
-}: ToolDetailsDialogProps) {
-  return (
-    <Dialog open={Boolean(tool)} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{TOOL_DETAILS_TEXT.title}</DialogTitle>
-          <DialogDescription>{TOOL_DETAILS_TEXT.description}</DialogDescription>
-        </DialogHeader>
-
-        {tool ? (
-          <div className="flex flex-col gap-4">
-            <ToolImage tool={tool} />
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <DetailItem
-                label={TOOL_DETAILS_TEXT.tagLabel}
-                value={`${TOOLS_CARD_TEXT.tagPrefix} ${tool.tagNumber}`}
-              />
-              <DetailItem
-                label={TOOL_DETAILS_TEXT.nameLabel}
-                value={tool.name}
-              />
-              <DetailItem
-                label={TOOL_DETAILS_TEXT.typeLabel}
-                value={
-                  tool.type === 'ASSIGNED'
-                    ? TOOLS_PAGE_TEXT.assignedType
-                    : TOOLS_PAGE_TEXT.inventoryType
-                }
-              />
-              <DetailItem
-                label={TOOL_DETAILS_TEXT.projectLabel}
-                value={tool.projectName}
-              />
-              <DetailItem
-                label={TOOL_DETAILS_TEXT.statusLabel}
-                value={TOOL_STATUS_LABELS[tool.status]}
-              />
-              <DetailItem
-                label={TOOL_DETAILS_TEXT.conditionLabel}
-                value={TOOL_CONDITION_LABELS[tool.condition]}
-              />
-            </div>
-            <DetailItem
-              label={TOOL_DETAILS_TEXT.notesLabel}
-              value={tool.notes || TOOL_DETAILS_TEXT.noNotes}
-            />
-          </div>
-        ) : null}
-
-        <DialogFooter>
-          {tool ? (
-            <>
-              <Button
-                variant="danger"
-                onClick={() => {
-                  onDelete(tool);
-                }}
-              >
-                <Trash2 data-icon="inline-start" />
-                {TOOLS_CARD_TEXT.deleteAction}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onEdit(tool);
-                }}
-              >
-                <Edit2 data-icon="inline-start" />
-                {TOOLS_CARD_TEXT.editAction}
-              </Button>
-            </>
-          ) : null}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {TOOL_DETAILS_TEXT.closeButton}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-type DetailItemProps = {
-  label: string;
-  value: string;
-};
-
-function DetailItem({ label, value }: DetailItemProps) {
-  return (
-    <div className="rounded-lg border bg-muted/30 p-3">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
     </div>
   );
 }
