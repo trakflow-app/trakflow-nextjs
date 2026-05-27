@@ -1,8 +1,8 @@
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ToolCreateButton } from '@/components/tools/tool-create-button';
 import { ToolsList } from '@/components/tools/tools-list';
 import { ToolsStatsGrid } from '@/components/tools/tools-stats-grid';
 import { requireOrgMember } from '@/lib/dal/auth';
+import { getProjects } from '@/lib/dal/projects';
 import { getTools } from '@/lib/dal/tools';
 import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
@@ -11,7 +11,11 @@ import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-loca
  */
 export default async function ToolsPage() {
   const { account } = await requireOrgMember();
-  const tools = await getTools(account.org_id as string);
+  const orgId = account.org_id as string;
+  const [tools, projects] = await Promise.all([
+    getTools(orgId),
+    getProjects(orgId),
+  ]);
 
   return (
     <div className="min-h-screen bg-background px-6 py-8">
@@ -25,14 +29,11 @@ export default async function ToolsPage() {
               {TOOLS_PAGE_TEXT.subtitle}
             </p>
           </div>
-          <Button disabled>
-            <Plus />
-            {TOOLS_PAGE_TEXT.addToolButton}
-          </Button>
+          <ToolCreateButton projects={projects} />
         </div>
 
         <ToolsStatsGrid tools={tools} />
-        <ToolsList tools={tools} />
+        <ToolsList tools={tools} projects={projects} />
       </div>
     </div>
   );
