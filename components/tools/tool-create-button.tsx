@@ -20,56 +20,45 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  TOOL_CONDITION_OPTIONS,
+  TOOLS_MANAGEMENT,
+  TOOL_STATUS_OPTIONS,
+} from '@/constants/components/tools/tools-constants';
 import type { ProjectRow } from '@/lib/dal/projects';
 import { showToast } from '@/lib/toast';
-import type { Database } from '@/lib/types/database.types';
 import {
-  TOOL_CONDITION_LABELS,
   TOOL_CREATE_TEXT,
   TOOLS_ACTION_TEXT,
   TOOLS_PAGE_TEXT,
-  TOOL_STATUS_LABELS,
 } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
-type ToolStatus = Database['public']['Enums']['tool_status'];
-type ToolCondition = Database['public']['Enums']['tool_condition'];
 type ToolProject = Pick<ProjectRow, 'id' | 'project_name'>;
 
 type ToolCreateButtonProps = {
   projects: ToolProject[];
 };
 
-const DEFAULT_TOOL_STATUS: ToolStatus = 'AVAILABLE';
-const DEFAULT_TOOL_CONDITION: ToolCondition = 'GOOD';
-const INVENTORY_PROJECT_VALUE = 'inventory';
-const MIN_TAG_NUMBER = 1;
-const TOOL_FORM_KEYS = {
-  name: 'name',
-  tagNumber: 'tagNumber',
-  status: 'status',
-  condition: 'condition',
-  projectId: 'projectId',
-  notes: 'notes',
-} as const;
-
-const STATUS_OPTIONS: SelectOption[] = Object.entries(TOOL_STATUS_LABELS).map(
-  ([value, label]) => ({ value, label }),
-);
-
-const CONDITION_OPTIONS: SelectOption[] = Object.entries(
-  TOOL_CONDITION_LABELS,
-).map(([value, label]) => ({ value, label }));
-
 /**
  * Header button and dialog for creating a new tool record.
  */
 export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
+  /**
+   * State management
+   */
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  /**
+   * Builds project options for the create form assignment field.
+   */
   const projectOptions = useMemo<SelectOption[]>(
     () => [
-      { label: TOOLS_PAGE_TEXT.inventoryType, value: INVENTORY_PROJECT_VALUE },
+      {
+        label: TOOLS_PAGE_TEXT.inventoryType,
+        value: TOOLS_MANAGEMENT.FILTERS.INVENTORY_PROJECT_VALUE,
+      },
       ...projects.map((project) => ({
         label: project.project_name,
         value: project.id,
@@ -78,6 +67,9 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
     [projects],
   );
 
+  /**
+   * Creates a new tool and refreshes the tools page on success.
+   */
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
@@ -117,65 +109,79 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <ToolCreateFormField
               label={TOOL_CREATE_TEXT.nameLabel}
-              htmlFor={TOOL_FORM_KEYS.name}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.name}
             >
               <Input
-                id={TOOL_FORM_KEYS.name}
-                name={TOOL_FORM_KEYS.name}
+                id={TOOLS_MANAGEMENT.FORM_KEYS.name}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.name}
                 required
               />
             </ToolCreateFormField>
             <ToolCreateFormField
               label={TOOL_CREATE_TEXT.tagNumberLabel}
-              htmlFor={TOOL_FORM_KEYS.tagNumber}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
             >
               <Input
-                id={TOOL_FORM_KEYS.tagNumber}
-                name={TOOL_FORM_KEYS.tagNumber}
+                id={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
                 type="number"
-                min={MIN_TAG_NUMBER}
+                min={TOOLS_MANAGEMENT.LIMITS.MIN_TAG_NUMBER}
                 required
               />
             </ToolCreateFormField>
             <ToolCreateFormField
               label={TOOL_CREATE_TEXT.projectLabel}
-              htmlFor={TOOL_FORM_KEYS.projectId}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.projectId}
             >
               <SelectField
-                id={TOOL_FORM_KEYS.projectId}
-                name={TOOL_FORM_KEYS.projectId}
+                id={TOOLS_MANAGEMENT.FORM_KEYS.projectId}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.projectId}
                 options={projectOptions}
-                defaultValue={INVENTORY_PROJECT_VALUE}
+                defaultValue={TOOLS_MANAGEMENT.FILTERS.INVENTORY_PROJECT_VALUE}
               />
             </ToolCreateFormField>
             <ToolCreateFormField
               label={TOOL_CREATE_TEXT.statusLabel}
-              htmlFor={TOOL_FORM_KEYS.status}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.status}
             >
               <SelectField
-                id={TOOL_FORM_KEYS.status}
-                name={TOOL_FORM_KEYS.status}
-                options={STATUS_OPTIONS}
-                defaultValue={DEFAULT_TOOL_STATUS}
+                id={TOOLS_MANAGEMENT.FORM_KEYS.status}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.status}
+                options={TOOL_STATUS_OPTIONS}
+                defaultValue={TOOLS_MANAGEMENT.DEFAULTS.TOOL_STATUS}
               />
             </ToolCreateFormField>
             <ToolCreateFormField
               label={TOOL_CREATE_TEXT.conditionLabel}
-              htmlFor={TOOL_FORM_KEYS.condition}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.condition}
             >
               <SelectField
-                id={TOOL_FORM_KEYS.condition}
-                name={TOOL_FORM_KEYS.condition}
-                options={CONDITION_OPTIONS}
-                defaultValue={DEFAULT_TOOL_CONDITION}
+                id={TOOLS_MANAGEMENT.FORM_KEYS.condition}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.condition}
+                options={TOOL_CONDITION_OPTIONS}
+                defaultValue={TOOLS_MANAGEMENT.DEFAULTS.TOOL_CONDITION}
               />
             </ToolCreateFormField>
           </div>
           <ToolCreateFormField
-            label={TOOL_CREATE_TEXT.notesLabel}
-            htmlFor={TOOL_FORM_KEYS.notes}
+            label={TOOL_CREATE_TEXT.imageAttachmentLabel}
+            htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
           >
-            <Textarea id={TOOL_FORM_KEYS.notes} name={TOOL_FORM_KEYS.notes} />
+            <Input
+              id={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+              name={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+              type="file"
+              accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
+            />
+          </ToolCreateFormField>
+          <ToolCreateFormField
+            label={TOOL_CREATE_TEXT.notesLabel}
+            htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.notes}
+          >
+            <Textarea
+              id={TOOLS_MANAGEMENT.FORM_KEYS.notes}
+              name={TOOLS_MANAGEMENT.FORM_KEYS.notes}
+            />
           </ToolCreateFormField>
           <DialogFooter>
             <DialogClose asChild>

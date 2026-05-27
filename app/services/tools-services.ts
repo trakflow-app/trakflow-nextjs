@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { requireOrgMember } from '@/lib/dal/auth';
 import { createClient } from '@/lib/supabase/server';
+import {
+  TOOLS_MANAGEMENT,
+  TOOL_CONDITION_VALUES,
+  TOOL_STATUS_VALUES,
+} from '@/constants/components/tools/tools-constants';
 import type { Database } from '@/lib/types/database.types';
 import { TOOLS_ACTION_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
@@ -17,31 +22,9 @@ export type ToolActionState = {
   success?: boolean;
 } | null;
 
-const TOOLS_PATH = '/tools';
-const INVENTORY_PROJECT_VALUE = 'inventory';
-const MIN_TAG_NUMBER = 1;
-const FORM_KEYS = {
-  id: 'id',
-  name: 'name',
-  tagNumber: 'tagNumber',
-  status: 'status',
-  condition: 'condition',
-  projectId: 'projectId',
-  notes: 'notes',
-} as const;
-const TOOL_STATUS_VALUES = [
-  'AVAILABLE',
-  'CHECKEDOUT',
-  'OUT_OF_SERVICE',
-  'ARCHIVED',
-] as const satisfies readonly ToolStatus[];
-const TOOL_CONDITION_VALUES = [
-  'GOOD',
-  'FAIR',
-  'DAMAGED',
-  'OUT_OF_SERVICE',
-] as const satisfies readonly ToolCondition[];
-
+/**
+ * Shared form values for create/edit tool actions, with parsing/validation logic
+ */
 type ToolFormValues = {
   name: string;
   tagNumber: number;
@@ -51,6 +34,9 @@ type ToolFormValues = {
   notes: string | null;
 };
 
+/**
+ * Reads and trims a required string from form data.
+ */
 function getRequiredFormString(formData: FormData, key: string): string | null {
   const value = formData.get(key);
 
@@ -62,27 +48,48 @@ function getRequiredFormString(formData: FormData, key: string): string | null {
   return trimmedValue.length > 0 ? trimmedValue : null;
 }
 
+/**
+ * Narrows submitted status values to known tool statuses.
+ */
 function isToolStatus(value: string): value is ToolStatus {
   return TOOL_STATUS_VALUES.includes(value as ToolStatus);
 }
 
+/**
+ * Narrows submitted condition values to known tool conditions.
+ */
 function isToolCondition(value: string): value is ToolCondition {
   return TOOL_CONDITION_VALUES.includes(value as ToolCondition);
 }
 
+/**
+ * Parses and validates shared create/edit tool form values.
+ */
 function getToolFormValues(formData: FormData): ToolFormValues | null {
-  const name = getRequiredFormString(formData, FORM_KEYS.name);
-  const tagNumberValue = getRequiredFormString(formData, FORM_KEYS.tagNumber);
-  const status = getRequiredFormString(formData, FORM_KEYS.status);
-  const condition = getRequiredFormString(formData, FORM_KEYS.condition);
-  const projectIdValue = getRequiredFormString(formData, FORM_KEYS.projectId);
-  const notesValue = formData.get(FORM_KEYS.notes);
+  const name = getRequiredFormString(formData, TOOLS_MANAGEMENT.FORM_KEYS.name);
+  const tagNumberValue = getRequiredFormString(
+    formData,
+    TOOLS_MANAGEMENT.FORM_KEYS.tagNumber,
+  );
+  const status = getRequiredFormString(
+    formData,
+    TOOLS_MANAGEMENT.FORM_KEYS.status,
+  );
+  const condition = getRequiredFormString(
+    formData,
+    TOOLS_MANAGEMENT.FORM_KEYS.condition,
+  );
+  const projectIdValue = getRequiredFormString(
+    formData,
+    TOOLS_MANAGEMENT.FORM_KEYS.projectId,
+  );
+  const notesValue = formData.get(TOOLS_MANAGEMENT.FORM_KEYS.notes);
   const tagNumber = tagNumberValue ? Number(tagNumberValue) : Number.NaN;
 
   if (
     !name ||
     !Number.isInteger(tagNumber) ||
-    tagNumber < MIN_TAG_NUMBER ||
+    tagNumber < TOOLS_MANAGEMENT.LIMITS.MIN_TAG_NUMBER ||
     !status ||
     !isToolStatus(status) ||
     !condition ||
@@ -97,7 +104,8 @@ function getToolFormValues(formData: FormData): ToolFormValues | null {
     status,
     condition,
     projectId:
-      projectIdValue && projectIdValue !== INVENTORY_PROJECT_VALUE
+      projectIdValue &&
+      projectIdValue !== TOOLS_MANAGEMENT.FILTERS.INVENTORY_PROJECT_VALUE
         ? projectIdValue
         : null,
     notes:
@@ -135,7 +143,7 @@ export async function createToolAction(
     return { error: TOOLS_ACTION_TEXT.createFailed };
   }
 
-  revalidatePath(TOOLS_PATH);
+  revalidatePath(TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH);
 
   return { success: true };
 }
@@ -147,7 +155,7 @@ export async function updateToolAction(
   formData: FormData,
 ): Promise<ToolActionState> {
   const { account } = await requireOrgMember();
-  const id = getRequiredFormString(formData, FORM_KEYS.id);
+  const id = getRequiredFormString(formData, TOOLS_MANAGEMENT.FORM_KEYS.id);
   const values = getToolFormValues(formData);
 
   if (!id || !values) {
@@ -172,7 +180,7 @@ export async function updateToolAction(
     return { error: TOOLS_ACTION_TEXT.updateFailed };
   }
 
-  revalidatePath(TOOLS_PATH);
+  revalidatePath(TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH);
 
   return { success: true };
 }
@@ -184,7 +192,7 @@ export async function deleteToolAction(
   formData: FormData,
 ): Promise<ToolActionState> {
   const { account } = await requireOrgMember();
-  const id = getRequiredFormString(formData, FORM_KEYS.id);
+  const id = getRequiredFormString(formData, TOOLS_MANAGEMENT.FORM_KEYS.id);
 
   if (!id) {
     return { error: TOOLS_ACTION_TEXT.invalidTool };
@@ -201,7 +209,7 @@ export async function deleteToolAction(
     return { error: TOOLS_ACTION_TEXT.deleteFailed };
   }
 
-  revalidatePath(TOOLS_PATH);
+  revalidatePath(TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH);
 
   return { success: true };
 }
