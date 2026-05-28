@@ -1,0 +1,219 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+import type { FormEvent, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
+import { createToolAction } from '@/app/services/tools-services';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SelectField, type SelectOption } from '@/components/ui/select-field';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  TOOL_CONDITION_OPTIONS,
+  TOOLS_MANAGEMENT,
+  TOOL_STATUS_OPTIONS,
+} from '@/constants/components/tools/tools-constants';
+import type { ProjectRow } from '@/lib/dal/projects';
+import { showToast } from '@/lib/toast';
+import {
+  TOOL_CREATE_TEXT,
+  TOOLS_ACTION_TEXT,
+  TOOLS_PAGE_TEXT,
+} from '@/locales/app/(dashboard)/tools/tools-page-locales';
+
+type ToolProject = Pick<ProjectRow, 'id' | 'project_name'>;
+
+type ToolCreateButtonProps = {
+  projects: ToolProject[];
+};
+
+/**
+ * Header button and dialog for creating a new tool record.
+ */
+export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
+  /**
+   * State management
+   */
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  /**
+   * Builds project options for the create form assignment field.
+   */
+  const projectOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        label: TOOLS_PAGE_TEXT.inventoryType,
+        value: TOOLS_MANAGEMENT.FILTERS.INVENTORY_PROJECT_VALUE,
+      },
+      ...projects.map((project) => ({
+        label: project.project_name,
+        value: project.id,
+      })),
+    ],
+    [projects],
+  );
+
+  /**
+   * Creates a new tool and refreshes the tools page on success.
+   */
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    startTransition(() => {
+      void (async () => {
+        const result = await createToolAction(formData);
+
+        if (result?.error) {
+          showToast(result.error, 'error');
+          return;
+        }
+
+        showToast(TOOLS_ACTION_TEXT.createSuccess, 'success');
+        form.reset();
+        setOpen(false);
+        router.refresh();
+      })();
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus data-icon="inline-start" />
+          {TOOLS_PAGE_TEXT.addToolButton}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{TOOL_CREATE_TEXT.title}</DialogTitle>
+          <DialogDescription>{TOOL_CREATE_TEXT.description}</DialogDescription>
+        </DialogHeader>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <ToolCreateFormField
+              label={TOOL_CREATE_TEXT.nameLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.name}
+            >
+              <Input
+                id={TOOLS_MANAGEMENT.FORM_KEYS.name}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.name}
+                required
+              />
+            </ToolCreateFormField>
+            <ToolCreateFormField
+              label={TOOL_CREATE_TEXT.tagNumberLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
+            >
+              <Input
+                id={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
+                type="number"
+                min={TOOLS_MANAGEMENT.LIMITS.MIN_TAG_NUMBER}
+                required
+              />
+            </ToolCreateFormField>
+            <ToolCreateFormField
+              label={TOOL_CREATE_TEXT.projectLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.projectId}
+            >
+              <SelectField
+                id={TOOLS_MANAGEMENT.FORM_KEYS.projectId}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.projectId}
+                options={projectOptions}
+                defaultValue={TOOLS_MANAGEMENT.FILTERS.INVENTORY_PROJECT_VALUE}
+              />
+            </ToolCreateFormField>
+            <ToolCreateFormField
+              label={TOOL_CREATE_TEXT.statusLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.status}
+            >
+              <SelectField
+                id={TOOLS_MANAGEMENT.FORM_KEYS.status}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.status}
+                options={TOOL_STATUS_OPTIONS}
+                defaultValue={TOOLS_MANAGEMENT.DEFAULTS.TOOL_STATUS}
+              />
+            </ToolCreateFormField>
+            <ToolCreateFormField
+              label={TOOL_CREATE_TEXT.conditionLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.condition}
+            >
+              <SelectField
+                id={TOOLS_MANAGEMENT.FORM_KEYS.condition}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.condition}
+                options={TOOL_CONDITION_OPTIONS}
+                defaultValue={TOOLS_MANAGEMENT.DEFAULTS.TOOL_CONDITION}
+              />
+            </ToolCreateFormField>
+          </div>
+          <ToolCreateFormField
+            label={TOOL_CREATE_TEXT.imageAttachmentLabel}
+            htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+          >
+            <Input
+              id={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+              name={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+              type="file"
+              accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
+            />
+          </ToolCreateFormField>
+          <ToolCreateFormField
+            label={TOOL_CREATE_TEXT.notesLabel}
+            htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.notes}
+          >
+            <Textarea
+              id={TOOLS_MANAGEMENT.FORM_KEYS.notes}
+              name={TOOLS_MANAGEMENT.FORM_KEYS.notes}
+            />
+          </ToolCreateFormField>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline" disabled={isPending}>
+                {TOOL_CREATE_TEXT.cancelButton}
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={isPending}>
+              {TOOL_CREATE_TEXT.createButton}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type ToolCreateFormFieldProps = {
+  label: string;
+  htmlFor: string;
+  children: ReactNode;
+};
+
+function ToolCreateFormField({
+  label,
+  htmlFor,
+  children,
+}: ToolCreateFormFieldProps) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={htmlFor}>{label}</Label>
+      {children}
+    </div>
+  );
+}
