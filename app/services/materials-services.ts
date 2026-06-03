@@ -114,3 +114,72 @@ export async function createMaterialAction(params: {
 
   return data;
 }
+
+/**
+ * Updates an existing material inventory item.
+ */
+export async function updateMaterialAction(params: {
+  id?: string;
+  materialId?: string;
+  orgId: string;
+  name: string;
+  projectId?: string | null;
+  quantity: number;
+  unitCost: number;
+  lowStockThreshold: number;
+}) {
+  const materialId = params.id ?? params.materialId;
+
+  if (!materialId) {
+    throw new Error('Material id is required');
+  }
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.notAuthenticated);
+  }
+
+  const { data: account, error: accountError } = await supabase
+    .from('accounts')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (accountError || !account?.org_id || !account?.role) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
+  }
+
+  const canManageMaterials =
+    account.org_id === params.orgId &&
+    MATERIAL_MANAGER_ROLES.includes(account.role);
+
+  if (!canManageMaterials) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
+  }
+
+  const adminSupabase = createAdminClient();
+
+  const { data, error } = await adminSupabase
+    .from('materials')
+    .update({
+      name: params.name,
+      project_id: params.projectId || null,
+      unit_qty: params.quantity,
+      unit_cost: params.unitCost,
+      low_stock_threshold: params.lowStockThreshold,
+    })
+    .eq('id', materialId)
+    .eq('org_id', params.orgId)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  return data;
+}
