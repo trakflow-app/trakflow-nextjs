@@ -11,6 +11,7 @@ import { fetchProjectsForOrg, type ProjectOption } from '@/lib/dal/projects';
 import { createClient } from '@/lib/supabase/client';
 import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
 import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';
+import { MaterialEditModal } from '@/components/materials/MaterialsEditModal';
 import { MaterialsAddModal } from '@/components/materials/MaterialsAddModal';
 
 /**
@@ -36,6 +37,12 @@ export default function MaterialsPage() {
 
   // Modal state for adding new material
   const [addModalOpen, setAddModalOpen] = useState(false);
+
+  // Modal state for editing an existing material
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedEditMaterialId, setSelectedEditMaterialId] = useState<
+    string | null
+  >(null);
 
   /**
    * Data fetching
@@ -89,6 +96,17 @@ export default function MaterialsPage() {
   const projects = useMemo(
     () => orgProjects.map((project) => project.name),
     [orgProjects],
+  );
+
+  /**
+   * Gets the material currently selected for editing.
+   */
+  const selectedEditMaterial = useMemo(
+    () =>
+      selectedEditMaterialId
+        ? materials.find((material) => material.id === selectedEditMaterialId)
+        : null,
+    [materials, selectedEditMaterialId],
   );
 
   /**
@@ -150,8 +168,27 @@ export default function MaterialsPage() {
    * @param id - The unique identifier of the material.
    */
   const handleEdit = (id: string) => {
-    // TODO: Create the function for this and use modal
-    console.log('Edit', id);
+    setSelectedEditMaterialId(id);
+    setEditModalOpen(true);
+  };
+
+  /**
+   * Closes the material editor.
+   */
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setSelectedEditMaterialId(null);
+  };
+
+  /**
+   * Callback when material details are successfully updated.
+   */
+  const handleEditSubmitSuccess = (updatedMaterial: MaterialUI) => {
+    setMaterials((prevMaterials) =>
+      prevMaterials.map((material) =>
+        material.id === updatedMaterial.id ? updatedMaterial : material,
+      ),
+    );
   };
 
   /**
@@ -219,6 +256,13 @@ export default function MaterialsPage() {
         orgId={orgId}
         projects={orgProjects}
         onSubmitSuccess={loadMaterials}
+      />
+      {/* Material Edit Modal */}
+      <MaterialEditModal
+        isOpen={editModalOpen}
+        onClose={handleCloseEditModal}
+        material={selectedEditMaterial ?? null}
+        onSubmitSuccess={handleEditSubmitSuccess}
       />
     </div>
   );

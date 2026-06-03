@@ -48,8 +48,11 @@ Set the following variables in `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+RESEND_API_KEY=your-resend-api-key
+RESEND_FROM_EMAIL="TrakFlow <onboarding@your-domain.com>"
 SUPABASE_PROJECT_ID=your-project-id
 TRAKFLOW_BOOTSTRAP_TEST_PASSWORD=your-shared-test-password
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 Minimum required to run the app:
@@ -61,6 +64,12 @@ Required only for the hosted bootstrap flow:
 
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `TRAKFLOW_BOOTSTRAP_TEST_PASSWORD`
+
+Required only for foreman invite emails:
+
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `NEXT_PUBLIC_APP_URL`
 
 Optional:
 
@@ -75,6 +84,8 @@ bootstrap password only in `.env.local`.
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` is your project’s anon/public key.
 - `SUPABASE_SERVICE_ROLE_KEY` is required for the shared hosted dev bootstrap flow.
 - `TRAKFLOW_BOOTSTRAP_TEST_PASSWORD` is the shared password reset onto the seeded test accounts during bootstrap reruns.
+- `RESEND_API_KEY` and `RESEND_FROM_EMAIL` are used by Resend for foreman invite emails.
+- `NEXT_PUBLIC_APP_URL` is used to build absolute invite links.
 
 ## Repo Bootstrap
 

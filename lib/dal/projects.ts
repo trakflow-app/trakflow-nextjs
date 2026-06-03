@@ -90,14 +90,20 @@ export async function getProjects(
  */
 export async function getProjectById(
   projectId: string,
+  orgId?: string | null,
 ): Promise<ProjectRow | null> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('projects')
     .select(PROJECTS_LIST_SELECT_COLUMNS)
-    .eq('id', projectId)
-    .single();
+    .eq('id', projectId);
+
+  if (orgId) {
+    query = query.eq('org_id', orgId);
+  }
+
+  const { data, error } = await query.single();
 
   if (error) throw error;
 
@@ -109,14 +115,21 @@ export async function getProjectById(
  */
 export async function getProjectTools(
   projectId: string,
+  orgId?: string | null,
 ): Promise<ProjectTool[]> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('tools')
     .select('*')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false });
+
+  if (orgId) {
+    query = query.eq('org_id', orgId);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
 
@@ -128,14 +141,21 @@ export async function getProjectTools(
  */
 export async function getProjectMaterials(
   projectId: string,
+  orgId?: string | null,
 ): Promise<ProjectMaterial[]> {
   const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('materials')
     .select('*')
     .eq('project_id', projectId)
     .order('created_at', { ascending: false });
+
+  if (orgId) {
+    query = query.eq('org_id', orgId);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
 

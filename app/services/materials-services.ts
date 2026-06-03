@@ -2,6 +2,7 @@
 
 import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
+import { type MaterialUI } from '@/lib/dal/materials';
 import { type Database } from '@/lib/types/database.types';
 
 const MATERIAL_SERVICE_ERRORS = {
@@ -121,17 +122,23 @@ export async function createMaterialAction(params: {
 export async function updateMaterialAction(params: {
   id?: string;
   materialId?: string;
-  orgId: string;
+  orgId?: string;
   name: string;
   projectId?: string | null;
   quantity: number;
   unitCost: number;
-  lowStockThreshold: number;
-}) {
+  lowStockThreshold?: number;
+  minQuantity?: number;
+}): Promise<MaterialUI> {
   const materialId = params.id ?? params.materialId;
+  const lowStockThreshold = params.lowStockThreshold ?? params.minQuantity;
 
   if (!materialId) {
     throw new Error('Material id is required');
+  }
+
+  if (lowStockThreshold === undefined) {
+    throw new Error('Low stock threshold is required');
   }
 
   const supabase = await createClient();
@@ -155,9 +162,9 @@ export async function updateMaterialAction(params: {
     throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
   }
 
+  const orgId = params.orgId ?? account.org_id;
   const canManageMaterials =
-    account.org_id === params.orgId &&
-    MATERIAL_MANAGER_ROLES.includes(account.role);
+    account.org_id === orgId && MATERIAL_MANAGER_ROLES.includes(account.role);
 
   if (!canManageMaterials) {
     throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
@@ -165,21 +172,43 @@ export async function updateMaterialAction(params: {
 
   const adminSupabase = createAdminClient();
 
+  const updateValues: Database['public']['Tables']['materials']['Update'] = {
+    name: params.name,
+    unit_qty: params.quantity,
+    unit_cost: params.unitCost,
+    low_stock_threshold: lowStockThreshold,
+  };
+
+  if (params.projectId !== undefined) {
+    updateValues.project_id = params.projectId || null;
+  }
+
   const { data, error } = await adminSupabase
     .from('materials')
-    .update({
-      name: params.name,
-      project_id: params.projectId || null,
-      unit_qty: params.quantity,
-      unit_cost: params.unitCost,
-      low_stock_threshold: params.lowStockThreshold,
-    })
+    .update(updateValues)
     .eq('id', materialId)
-    .eq('org_id', params.orgId)
-    .select()
+    .eq('org_id', orgId)
+    .select(
+      `
+      *,
+      projects (
+        project_name
+      )
+    `,
+    )
     .single();
 
   if (error) throw new Error(error.message);
 
-  return data;
+  return {
+    id: data.id,
+    name: data.name,
+    projectId: data.project_id,
+    projectName: data.projects?.project_name || 'Unassigned',
+    quantity: data.unit_qty,
+    minQuantity: data.low_stock_threshold,
+    unitCost: data.unit_cost,
+    totalValue: data.unit_qty * data.unit_cost,
+    unit: 'units',
+  };
 }
