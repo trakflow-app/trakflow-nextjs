@@ -7,6 +7,7 @@ import StatsGrid from '@/components/materials/StatsGrid';
 import FilterBar from '@/components/materials/FilterBar';
 import MaterialsTable from '@/components/materials/MaterialsTable';
 import { fetchMaterials, type MaterialUI } from '@/lib/dal/materials';
+import { fetchProjectsForOrg, type ProjectOption } from '@/lib/dal/projects';
 import { createClient } from '@/lib/supabase/client';
 import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
 import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';
@@ -23,6 +24,7 @@ export default function MaterialsPage() {
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [materials, setMaterials] = useState<MaterialUI[]>([]);
+  const [orgProjects, setOrgProjects] = useState<ProjectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [orgId, setOrgId] = useState<string | null>(null);
 
@@ -63,9 +65,13 @@ export default function MaterialsPage() {
       return;
     }
 
-    // API call to retrieve materials or the specific organizations
-    const data = await fetchMaterials(account.org_id);
+    // API call to retrieve materials and projects for the specific organization
+    const [data, projectsData] = await Promise.all([
+      fetchMaterials(account.org_id),
+      fetchProjectsForOrg(account.org_id),
+    ]);
     setMaterials(data);
+    setOrgProjects(projectsData);
     setLoading(false);
     setOrgId(account.org_id);
   }, []);
@@ -81,8 +87,8 @@ export default function MaterialsPage() {
    * Memoized to prevent recalculation on every re-render.
    */
   const projects = useMemo(
-    () => Array.from(new Set(materials.map((m) => m.projectName))),
-    [materials],
+    () => orgProjects.map((project) => project.name),
+    [orgProjects],
   );
 
   /**
@@ -211,6 +217,7 @@ export default function MaterialsPage() {
         isOpen={addModalOpen}
         onClose={() => setAddModalOpen(false)}
         orgId={orgId}
+        projects={orgProjects}
         onSubmitSuccess={loadMaterials}
       />
     </div>
