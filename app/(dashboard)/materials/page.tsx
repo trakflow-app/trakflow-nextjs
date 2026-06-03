@@ -11,7 +11,7 @@ import { fetchProjectsForOrg, type ProjectOption } from '@/lib/dal/projects';
 import { createClient } from '@/lib/supabase/client';
 import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
 import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';
-import { MaterialsAddModal } from '@/components/materials/MaterialsAddModal';
+import { MaterialEditModal } from '@/components/materials/MaterialsEditModal';
 
 /**
  * MaterialsPage Component
@@ -92,6 +92,17 @@ export default function MaterialsPage() {
   );
 
   /**
+   * Gets the material currently selected for editing.
+   */
+  const selectedEditMaterial = useMemo(
+    () =>
+      selectedEditMaterialId
+        ? materials.find((material) => material.id === selectedEditMaterialId)
+        : null,
+    [materials, selectedEditMaterialId],
+  );
+
+  /**
    * Opens the interface to record material consumption.
    * @param id - The unique identifier of the material.
    */
@@ -150,8 +161,27 @@ export default function MaterialsPage() {
    * @param id - The unique identifier of the material.
    */
   const handleEdit = (id: string) => {
-    // TODO: Create the function for this and use modal
-    console.log('Edit', id);
+    setSelectedEditMaterialId(id);
+    setEditModalOpen(true);
+  };
+
+  /**
+   * Closes the material editor.
+   */
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setSelectedEditMaterialId(null);
+  };
+
+  /**
+   * Callback when material details are successfully updated.
+   */
+  const handleEditSubmitSuccess = (updatedMaterial: MaterialUI) => {
+    setMaterials((prevMaterials) =>
+      prevMaterials.map((material) =>
+        material.id === updatedMaterial.id ? updatedMaterial : material,
+      ),
+    );
   };
 
   /**

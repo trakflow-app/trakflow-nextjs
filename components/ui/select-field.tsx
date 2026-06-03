@@ -15,8 +15,10 @@ export interface SelectOption {
 
 export interface SelectFieldProps {
   id?: string;
+  name?: string;
   options: SelectOption[];
   value?: string;
+  defaultValue?: string;
   onChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -28,15 +30,23 @@ export interface SelectFieldProps {
  */
 export function SelectField({
   id,
+  name,
   options,
   value,
+  defaultValue,
   onChange,
   placeholder,
   disabled,
   className,
 }: SelectFieldProps) {
   return (
-    <Select value={value} onValueChange={onChange} disabled={disabled}>
+    <Select
+      name={name}
+      value={value}
+      defaultValue={defaultValue}
+      onValueChange={onChange}
+      disabled={disabled}
+    >
       <SelectTrigger id={id} className={className}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
