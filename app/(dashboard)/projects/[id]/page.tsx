@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation';
 import { requireOrgMember } from '@/lib/dal/auth';
 import {
-  getProjectById,
-  getProjectTools,
-  getProjectMaterials,
-  getOrgMembers,
-} from '@/lib/dal/projects';
+  getServerProjectById,
+  getServerProjectTools,
+  getServerProjectMaterials,
+  getServerOrgMembers,
+} from '@/lib/dal/projects-server';
 import { ProjectHeader } from '@/components/projects/project-header';
 import { ProjectToolsSection } from '@/components/projects/project-tools-section';
 import { ProjectMaterialsSection } from '@/components/projects/project-materials-section';
@@ -31,10 +31,10 @@ export default async function ProjectDetailPage({
   const orgId = account.org_id as string;
 
   const [project, tools, materials, members] = await Promise.all([
-    getProjectById(id, orgId),
-    getProjectTools(id, orgId),
-    getProjectMaterials(id, orgId),
-    getOrgMembers(orgId),
+    getServerProjectById(id, orgId),
+    getServerProjectTools(id, orgId),
+    getServerProjectMaterials(id, orgId),
+    getServerOrgMembers(orgId),
   ]);
 
   if (!project) notFound();

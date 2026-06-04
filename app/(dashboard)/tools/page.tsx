@@ -2,7 +2,7 @@ import { ToolCreateButton } from '@/components/tools/tool-create-button';
 import { ToolsList } from '@/components/tools/tools-list';
 import { ToolsStatsGrid } from '@/components/tools/tools-stats-grid';
 import { requireOrgMember } from '@/lib/dal/auth';
-import { getProjects } from '@/lib/dal/projects';
+import { getServerProjects } from '@/lib/dal/projects-server';
 import { getTools } from '@/lib/dal/tools';
 import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
@@ -14,7 +14,7 @@ export default async function ToolsPage() {
   const orgId = account.org_id as string;
   const [tools, projects] = await Promise.all([
     getTools(orgId),
-    getProjects(orgId),
+    getServerProjects(orgId),
   ]);
 
   return (

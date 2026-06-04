@@ -32,6 +32,29 @@ export async function requireRole(role: UserRole) {
 }
 
 /**
+ * Asserts the current session belongs to a user with one of the given roles.
+ */
+export async function requireAnyRole(roles: readonly UserRole[]) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect('/login');
+
+  const { data: account } = await supabase
+    .from('accounts')
+    .select('id, name, email, role, org_id, created_at')
+    .eq('id', user.id)
+    .single();
+
+  if (!account || !account.role || !roles.includes(account.role)) redirect('/');
+
+  return { user, account };
+}
+
+/**
  * Asserts the current session belongs to an onboarded org member.
  * Redirects to /login if unauthenticated.
  * Redirects to / if the account has no org, no role, or does not exist.

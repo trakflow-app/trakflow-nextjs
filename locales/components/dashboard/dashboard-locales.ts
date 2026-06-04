@@ -1,0 +1,71 @@
+export const DASHBOARD_TEXT = {
+  organizationCodePrefix: 'Code:',
+  tabsLabel: 'Dashboard sections',
+  tabs: {
+    dashboard: 'Dashboard',
+    projects: 'Projects',
+    tools: 'Tools',
+    materials: 'Materials',
+    crew: 'Crew',
+  },
+  roleLabels: {
+    CREW: 'CREW',
+    FOREMAN: 'FOREMAN',
+    OWNER: 'OWNER',
+  },
+  pageTitle: 'Dashboard',
+  pageSubtitle: "Welcome back! Here's your construction overview",
+  recentProjectsTitle: 'Recent Projects',
+  upcomingTasksTitle: 'Upcoming Tasks',
+  projectManagerLabel: 'Manager:',
+  unassignedManagerLabel: 'Unassigned',
+  noProjectEndDateLabel: 'No due date',
+  emptyProjectsTitle: 'No projects yet',
+  emptyProjectsDescription: 'Projects will appear here after they are created.',
+  emptyTasksTitle: 'No upcoming tasks',
+  emptyTasksDescription: 'Scheduled work and reminders will appear here.',
+  dueLabel: 'Due:',
+  projectStatuses: {
+    onTrack: 'On Track',
+    atRisk: 'At Risk',
+    delayed: 'Delayed',
+    completed: 'Completed',
+  },
+  taskPriorities: {
+    high: 'high',
+    medium: 'medium',
+    low: 'low',
+  },
+  mockTasks: [
+    {
+      title: 'Foundation inspection - Downtown Office',
+      due: 'Tomorrow',
+      priority: 'high',
+    },
+    {
+      title: 'Material delivery - Riverside Apartments',
+      due: 'Apr 8',
+      priority: 'medium',
+    },
+    {
+      title: 'Safety audit - Highway Bridge',
+      due: 'Apr 10',
+      priority: 'high',
+    },
+    {
+      title: 'Client meeting - Shopping Mall',
+      due: 'Apr 12',
+      priority: 'low',
+    },
+    {
+      title: 'Electrical inspection - Office Complex',
+      due: 'Apr 15',
+      priority: 'medium',
+    },
+  ],
+  crewManagement: {
+    title: 'Crew',
+    subtitle: 'Manage team members and assignments',
+    placeholder: 'Crew management tools will be built here next.',
+  },
+} as const;
