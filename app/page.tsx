@@ -5,7 +5,6 @@ import {
   HOME_PAGE_PRIMARY_NAVIGATION_LINK_CLASS_NAME,
   HOME_PAGE_SIGNUP_HREF,
 } from '@/constants/app/page-constants';
-import { Footer } from '@/components/layout/footer';
 import { Header } from '@/components/layout/header';
 import { HOME_PAGE_MESSAGES } from '@/locales/app/page-locales';
 import Link from 'next/link';
@@ -43,7 +42,6 @@ export default function Home() {
           </div>
         </main>
       </div>
-      <Footer />
     </>
   );
 }

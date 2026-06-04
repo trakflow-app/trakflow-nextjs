@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { Footer } from '@/components/layout/footer';
 import { Header } from '@/components/layout/header';
 
 interface JoinLayoutProps {
@@ -14,7 +13,6 @@ export default function JoinLayout({ children }: JoinLayoutProps) {
     <>
       <Header />
       {children}
-      <Footer />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/sonner';
 
 import './globals.css';
@@ -18,6 +19,7 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         {children}
+        <Footer />
         <Toaster />
       </body>
     </html>
