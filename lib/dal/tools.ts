@@ -8,6 +8,9 @@ export type ToolStatus = Database['public']['Enums']['tool_status'];
 export type ToolCondition = Database['public']['Enums']['tool_condition'];
 export type ToolAssignmentType = 'INVENTORY' | 'ASSIGNED';
 
+/**
+ * Tool row shape used by tools dashboard and detail UI.
+ */
 export type ToolRow = {
   id: string;
   name: string;
