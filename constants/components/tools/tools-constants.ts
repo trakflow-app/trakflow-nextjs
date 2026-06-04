@@ -52,6 +52,15 @@ export const TOOLS_MANAGEMENT = {
     imageFile: 'imageFile',
     notes: 'notes',
   },
+  MANAGEMENT_FORM_KEYS: {
+    toolId: 'toolId',
+    toolIds: 'toolIds',
+    toolManagementId: 'toolManagementId',
+    condition: 'condition',
+    notes: 'notes',
+    sessionName: 'sessionName',
+    returnImagePath: 'returnImagePath',
+  },
 } as const;
 
 export const TOOL_STATUS_VALUES = [
@@ -111,12 +120,15 @@ export const TOOL_CONDITION_OPTIONS: SelectOption[] = Object.entries(
   TOOL_CONDITION_LABELS,
 ).map(([value, label]) => ({ value, label }));
 
+export const TOOL_CHECKOUT_CONDITION_OPTIONS: SelectOption[] =
+  TOOL_CONDITION_OPTIONS.filter((option) => option.value !== 'OUT_OF_SERVICE');
+
 export const TOOL_STATUS_VARIANTS: Record<
   ToolStatus,
-  'secondary' | 'outline' | 'destructive'
+  'secondary' | 'warning' | 'outline' | 'destructive'
 > = {
   AVAILABLE: 'secondary',
-  CHECKEDOUT: 'outline',
+  CHECKEDOUT: 'warning',
   OUT_OF_SERVICE: 'destructive',
   ARCHIVED: 'outline',
 };
