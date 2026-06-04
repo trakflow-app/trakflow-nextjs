@@ -24,6 +24,8 @@ export const TOOLS_CARD_TEXT = {
   viewAction: 'View',
   editAction: 'Edit',
   deleteAction: 'Delete',
+  checkoutAction: 'Check out',
+  checkinAction: 'Check in',
   tagPrefix: 'Tag',
   assignedProjectLabel: 'Project',
   inventoryProjectLabel: 'Inventory',
@@ -44,8 +46,14 @@ export const TOOL_DETAILS_TEXT = {
   imageAttachmentLabel: 'Image attachment',
   statusLabel: 'Status',
   conditionLabel: 'Condition',
+  checkedOutByLabel: 'Checked out by',
+  checkedOutAtLabel: 'Checked out',
+  checkoutSessionLabel: 'Session',
+  checkoutNotesLabel: 'Checkout notes',
   notesLabel: 'Notes',
   noNotes: 'No notes added.',
+  noCheckoutSession: 'No session name',
+  noCheckoutNotes: 'No checkout notes added.',
   imageLabel: 'Image',
   noImageLabel: 'Image placeholder',
 };
@@ -86,6 +94,28 @@ export const TOOL_DELETE_TEXT = {
   cancelButton: 'Cancel',
 };
 
+export const TOOL_CHECKOUT_TEXT = {
+  title: 'Check Out Tool',
+  description: 'Record who has taken this tool out of inventory.',
+  conditionLabel: 'Checkout condition',
+  sessionNameLabel: 'Session name',
+  sessionNamePlaceholder: 'Optional checkout batch name',
+  notesLabel: 'Notes',
+  notesPlaceholder: 'Optional checkout notes',
+  cancelButton: 'Cancel',
+  confirmButton: 'Check out tool',
+};
+
+export const TOOL_CHECKIN_TEXT = {
+  title: 'Check In Tool',
+  description: 'Record the returned condition for this tool.',
+  conditionLabel: 'Return condition',
+  notesLabel: 'Return notes',
+  notesPlaceholder: 'Optional return notes',
+  cancelButton: 'Cancel',
+  confirmButton: 'Check in tool',
+};
+
 export const TOOLS_PAGINATION_TEXT = {
   pageSizeLabel: 'Rows per page',
   previousButton: 'Previous',
@@ -101,6 +131,12 @@ export const TOOLS_ACTION_TEXT = {
   updateSuccess: 'Tool updated.',
   deleteFailed: 'Failed to delete tool.',
   deleteSuccess: 'Tool deleted.',
+  invalidCheckout: 'Enter valid checkout details.',
+  checkoutFailed: 'Failed to check out tool.',
+  checkoutSuccess: 'Tool checked out.',
+  invalidCheckin: 'Enter valid check-in details.',
+  checkinFailed: 'Failed to check in tool.',
+  checkinSuccess: 'Tool checked in.',
 };
 
 export const TOOLS_STATS_TEXT = {
