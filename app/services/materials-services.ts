@@ -1,13 +1,37 @@
-import { createClient } from '@/lib/supabase/client';
-import { MaterialUI } from '@/lib/dal/materials';
+'use server';
 
-type UpdateMaterialActionParams = {
-  id: string;
-  name: string;
-  quantity: number;
-  unitCost: number;
-  minQuantity: number;
+import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
+import { type MaterialUI } from '@/lib/dal/materials';
+import { type Database } from '@/lib/types/database.types';
+
+const MATERIAL_SERVICE_ERRORS = {
+  missingServerConfig: 'Missing Supabase server configuration',
+  notAuthenticated: 'You must be signed in to manage materials',
+  accountNotFound: 'Account details could not be loaded',
+  permissionDenied: 'You do not have permission to manage materials',
 };
+
+const MATERIAL_MANAGER_ROLES = ['OWNER', 'FOREMAN'];
+
+/**
+ * Creates a Supabase admin client for server-side material writes.
+ */
+function createAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.missingServerConfig);
+  }
+
+  return createSupabaseAdminClient<Database>(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
 
 /**
  * Function that record the log consumption of the materials
@@ -18,7 +42,7 @@ export async function logMaterialUsageAction(params: {
   quantityUsed: number;
   notes?: string;
 }) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Call the Postgres function defined in your schema
   const { data, error } = await supabase.rpc('log_material_usage', {
@@ -33,22 +57,137 @@ export async function logMaterialUsageAction(params: {
 }
 
 /**
- * Updates a material and returns the shape expected by material UI components.
+ * Creates a new material inventory item.
  */
-export async function updateMaterialAction(
-  params: UpdateMaterialActionParams,
-): Promise<MaterialUI> {
-  const supabase = createClient();
+export async function createMaterialAction(params: {
+  orgId: string;
+  name: string;
+  projectId?: string | null;
+  quantity: number;
+  unitCost: number;
+  lowStockThreshold: number;
+}) {
+  const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.notAuthenticated);
+  }
+
+  const { data: account, error: accountError } = await supabase
+    .from('accounts')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (accountError || !account?.org_id || !account?.role) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
+  }
+
+  const canManageMaterials =
+    account.org_id === params.orgId &&
+    MATERIAL_MANAGER_ROLES.includes(account.role);
+
+  if (!canManageMaterials) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
+  }
+
+  const adminSupabase = createAdminClient();
+
+  const { data, error } = await adminSupabase
     .from('materials')
-    .update({
+    .insert({
+      org_id: params.orgId,
       name: params.name,
+      project_id: params.projectId || null,
       unit_qty: params.quantity,
       unit_cost: params.unitCost,
-      low_stock_threshold: params.minQuantity,
+      low_stock_threshold: params.lowStockThreshold,
     })
-    .eq('id', params.id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  return data;
+}
+
+/**
+ * Updates an existing material inventory item.
+ */
+export async function updateMaterialAction(params: {
+  id?: string;
+  materialId?: string;
+  orgId?: string;
+  name: string;
+  projectId?: string | null;
+  quantity: number;
+  unitCost: number;
+  lowStockThreshold?: number;
+  minQuantity?: number;
+}): Promise<MaterialUI> {
+  const materialId = params.id ?? params.materialId;
+  const lowStockThreshold = params.lowStockThreshold ?? params.minQuantity;
+
+  if (!materialId) {
+    throw new Error('Material id is required');
+  }
+
+  if (lowStockThreshold === undefined) {
+    throw new Error('Low stock threshold is required');
+  }
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.notAuthenticated);
+  }
+
+  const { data: account, error: accountError } = await supabase
+    .from('accounts')
+    .select('org_id, role')
+    .eq('id', user.id)
+    .single();
+
+  if (accountError || !account?.org_id || !account?.role) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
+  }
+
+  const orgId = params.orgId ?? account.org_id;
+  const canManageMaterials =
+    account.org_id === orgId && MATERIAL_MANAGER_ROLES.includes(account.role);
+
+  if (!canManageMaterials) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
+  }
+
+  const adminSupabase = createAdminClient();
+
+  const updateValues: Database['public']['Tables']['materials']['Update'] = {
+    name: params.name,
+    unit_qty: params.quantity,
+    unit_cost: params.unitCost,
+    low_stock_threshold: lowStockThreshold,
+  };
+
+  if (params.projectId !== undefined) {
+    updateValues.project_id = params.projectId || null;
+  }
+
+  const { data, error } = await adminSupabase
+    .from('materials')
+    .update(updateValues)
+    .eq('id', materialId)
+    .eq('org_id', orgId)
     .select(
       `
       *,
@@ -61,13 +200,11 @@ export async function updateMaterialAction(
 
   if (error) throw new Error(error.message);
 
-  const project = data.projects as { project_name: string } | null;
-
   return {
     id: data.id,
     name: data.name,
     projectId: data.project_id,
-    projectName: project?.project_name || 'Unassigned',
+    projectName: data.projects?.project_name || 'Unassigned',
     quantity: data.unit_qty,
     minQuantity: data.low_stock_threshold,
     unitCost: data.unit_cost,

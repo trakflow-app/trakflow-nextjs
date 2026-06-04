@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StatsGrid from '@/components/materials/StatsGrid';
 import FilterBar from '@/components/materials/FilterBar';
 import MaterialsTable from '@/components/materials/MaterialsTable';
 import { fetchMaterials, type MaterialUI } from '@/lib/dal/materials';
+import { fetchProjectsForOrg, type ProjectOption } from '@/lib/dal/projects';
 import { createClient } from '@/lib/supabase/client';
 import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
 import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';
 import { MaterialEditModal } from '@/components/materials/MaterialsEditModal';
+import { MaterialsAddModal } from '@/components/materials/MaterialsAddModal';
 
 /**
  * MaterialsPage Component
@@ -23,7 +25,9 @@ export default function MaterialsPage() {
   const [projectFilter, setProjectFilter] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [materials, setMaterials] = useState<MaterialUI[]>([]);
+  const [orgProjects, setOrgProjects] = useState<ProjectOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   // Modal state for material usage logging
   const [usageModalOpen, setUsageModalOpen] = useState(false);
@@ -31,7 +35,10 @@ export default function MaterialsPage() {
     null,
   );
 
-  // Modal state for editing material details
+  // Modal state for adding new material
+  const [addModalOpen, setAddModalOpen] = useState(false);
+
+  // Modal state for editing an existing material
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditMaterialId, setSelectedEditMaterialId] = useState<
     string | null
@@ -40,48 +47,55 @@ export default function MaterialsPage() {
   /**
    * Data fetching
    */
-  useEffect(() => {
-    const loadMaterials = async () => {
-      const supabase = createClient();
+  const loadMaterials = useCallback(async () => {
+    const supabase = createClient();
 
-      // Retrieve the authenticated user session
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    // Retrieve the authenticated user session
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      // Fetch the organization ID linked to the user's account
-      const { data: account } = await supabase
-        .from('accounts')
-        .select('org_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!account?.org_id) {
-        setLoading(false);
-        return;
-      }
-
-      // API call to retrieve materials or the specific organizations
-      const data = await fetchMaterials(account.org_id);
-      setMaterials(data);
+    if (!user) {
       setLoading(false);
-    };
+      return;
+    }
 
-    void loadMaterials();
+    // Fetch the organization ID linked to the user's account
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('org_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!account?.org_id) {
+      setLoading(false);
+      return;
+    }
+
+    // API call to retrieve materials and projects for the specific organization
+    const [data, projectsData] = await Promise.all([
+      fetchMaterials(account.org_id),
+      fetchProjectsForOrg(account.org_id),
+    ]);
+    setMaterials(data);
+    setOrgProjects(projectsData);
+    setLoading(false);
+    setOrgId(account.org_id);
   }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadMaterials();
+    });
+  }, [loadMaterials]);
 
   /**
    * Extracts unique project names from the materials list for the FilterBar.
    * Memoized to prevent recalculation on every re-render.
    */
   const projects = useMemo(
-    () => Array.from(new Set(materials.map((m) => m.projectName))),
-    [materials],
+    () => orgProjects.map((project) => project.name),
+    [orgProjects],
   );
 
   /**
@@ -181,8 +195,7 @@ export default function MaterialsPage() {
    * Opens the add material modal.
    */
   const handleAddMaterial = () => {
-    // TODO [KAN-84]: Implement add material modal
-    console.log('Add new material');
+    setAddModalOpen(true);
   };
 
   return (
@@ -199,7 +212,6 @@ export default function MaterialsPage() {
 
         <div>
           <Button onClick={handleAddMaterial}>
-            {/** TODO [KAN-84]: Create the function for this one */}
             <Plus className="mr-2 h-4 w-4" /> {materialsPage.addMaterialButton}
           </Button>
         </div>
@@ -237,7 +249,14 @@ export default function MaterialsPage() {
         materials={materials}
         onSubmitSuccess={handleUsageSubmitSuccess}
       />
-
+      {/* Material Add Modal */}
+      <MaterialsAddModal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        orgId={orgId}
+        projects={orgProjects}
+        onSubmitSuccess={loadMaterials}
+      />
       {/* Material Edit Modal */}
       <MaterialEditModal
         isOpen={editModalOpen}

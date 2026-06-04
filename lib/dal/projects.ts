@@ -1,148 +1,185 @@
-import 'server-only';
+import { createClient } from '@/lib/supabase/client';
+import { type Database } from '@/lib/types/database.types';
 
-import { createClient } from '@/lib/supabase/server';
-import type { Database } from '@/lib/types/database.types';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export type ProjectRow = Database['public']['Tables']['projects']['Row'];
-export type ProjectTool = Pick<
-  Database['public']['Tables']['tools']['Row'],
-  'id' | 'name' | 'tag_number' | 'status' | 'condition'
->;
-export type ProjectMaterial = Pick<
-  Database['public']['Tables']['materials']['Row'],
-  'id' | 'name' | 'unit_qty' | 'unit_cost' | 'low_stock_threshold'
->;
-export type OrgMember = Pick<
-  Database['public']['Tables']['accounts']['Row'],
-  'id' | 'name' | 'role'
->;
-
-// ─── Error messages ───────────────────────────────────────────────────────────
-
-const PROJECTS_ERROR_MESSAGES = {
-  failedToLoadProject: 'Failed to load project.',
-  failedToLoadProjects: 'Failed to load projects.',
-  failedToLoadTools: 'Failed to load project tools.',
-  failedToLoadMaterials: 'Failed to load project materials.',
-  failedToLoadMembers: 'Failed to load org members.',
-} as const;
-
-function createProjectsError(message: string): Error {
-  return new Error(message);
-}
-
-// ─── Queries ──────────────────────────────────────────────────────────────────
+const PROJECTS_SELECT_COLUMNS = 'id, project_name';
+const PROJECTS_LIST_SELECT_COLUMNS =
+  'id, org_id, project_name, status, start_date, end_date, budget_amount, created_at';
 
 /**
- * Fetches all projects for the caller's org, ordered by creation date descending.
+ * Minimal project shape used by forms that only need project identity.
  */
-export async function getProjects(orgId: string): Promise<ProjectRow[]> {
-  const supabase = await createClient();
+export type ProjectOption = {
+  id: string;
+  name: string;
+};
+
+export type ProjectRow = Database['public']['Tables']['projects']['Row'];
+export type ProjectTool = Database['public']['Tables']['tools']['Row'];
+export type ProjectMaterial = Database['public']['Tables']['materials']['Row'];
+export type OrgMember = Database['public']['Tables']['accounts']['Row'];
+
+/**
+ * Loads the current user's organization id.
+ */
+async function getCurrentOrgId(): Promise<string | null> {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: account, error } = await supabase
+    .from('accounts')
+    .select('org_id')
+    .eq('id', user.id)
+    .single();
+
+  if (error) throw error;
+
+  return account?.org_id ?? null;
+}
+
+/**
+ * Fetches projects for a specific organization.
+ */
+export async function fetchProjectsForOrg(
+  orgId: string,
+): Promise<ProjectOption[]> {
+  const supabase = createClient();
 
   const { data, error } = await supabase
     .from('projects')
-    .select(
-      'id, project_name, start_date, end_date, budget_amount, status, created_at, org_id',
-    )
+    .select(PROJECTS_SELECT_COLUMNS)
     .eq('org_id', orgId)
+    .order('project_name', { ascending: true });
+
+  if (error) throw error;
+
+  return (data || []).map((project) => ({
+    id: project.id,
+    name: project.project_name,
+  }));
+}
+
+/**
+ * Fetches projects for the provided organization or the current user's org.
+ */
+export async function getProjects(
+  orgId?: string | null,
+): Promise<ProjectRow[]> {
+  const supabase = createClient();
+  const resolvedOrgId = orgId ?? (await getCurrentOrgId());
+
+  if (!resolvedOrgId) return [];
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select(PROJECTS_LIST_SELECT_COLUMNS)
+    .eq('org_id', resolvedOrgId)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    throw createProjectsError(PROJECTS_ERROR_MESSAGES.failedToLoadProjects);
-  }
+  if (error) throw error;
 
   return data ?? [];
 }
 
 /**
- * Fetches a single project by id, scoped to the caller's org.
- * Returns null if not found or not in the org — caller should invoke notFound().
+ * Fetches one project by id.
  */
 export async function getProjectById(
-  id: string,
-  orgId: string,
+  projectId: string,
+  orgId?: string | null,
 ): Promise<ProjectRow | null> {
-  const supabase = await createClient();
+  const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('projects')
-    .select('*')
-    .eq('id', id)
-    .eq('org_id', orgId)
-    .single();
+    .select(PROJECTS_LIST_SELECT_COLUMNS)
+    .eq('id', projectId);
 
-  if (error) {
-    if (error.code === 'PGRST116') return null;
-    throw createProjectsError(PROJECTS_ERROR_MESSAGES.failedToLoadProject);
+  if (orgId) {
+    query = query.eq('org_id', orgId);
   }
+
+  const { data, error } = await query.single();
+
+  if (error) throw error;
 
   return data;
 }
 
 /**
- * Fetches all tools assigned to a specific project, scoped to the caller's org.
+ * Fetches tools assigned to a project.
  */
 export async function getProjectTools(
   projectId: string,
-  orgId: string,
+  orgId?: string | null,
 ): Promise<ProjectTool[]> {
-  const supabase = await createClient();
+  const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('tools')
-    .select('id, name, tag_number, status, condition')
+    .select('*')
     .eq('project_id', projectId)
-    .eq('org_id', orgId)
-    .order('tag_number', { ascending: true });
+    .order('created_at', { ascending: false });
 
-  if (error) {
-    throw createProjectsError(PROJECTS_ERROR_MESSAGES.failedToLoadTools);
+  if (orgId) {
+    query = query.eq('org_id', orgId);
   }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
 
   return data ?? [];
 }
 
 /**
- * Fetches all materials assigned to a specific project, scoped to the caller's org.
+ * Fetches materials assigned to a project.
  */
 export async function getProjectMaterials(
   projectId: string,
-  orgId: string,
+  orgId?: string | null,
 ): Promise<ProjectMaterial[]> {
-  const supabase = await createClient();
+  const supabase = createClient();
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('materials')
-    .select('id, name, unit_qty, unit_cost, low_stock_threshold')
+    .select('*')
     .eq('project_id', projectId)
-    .eq('org_id', orgId)
-    .order('name', { ascending: true });
+    .order('created_at', { ascending: false });
 
-  if (error) {
-    throw createProjectsError(PROJECTS_ERROR_MESSAGES.failedToLoadMaterials);
+  if (orgId) {
+    query = query.eq('org_id', orgId);
   }
+
+  const { data, error } = await query;
+
+  if (error) throw error;
 
   return data ?? [];
 }
 
 /**
- * Fetches all onboarded members of the org (accounts with a non-null role).
+ * Fetches organization members for project pages.
  */
-export async function getOrgMembers(orgId: string): Promise<OrgMember[]> {
-  const supabase = await createClient();
+export async function getOrgMembers(
+  orgId?: string | null,
+): Promise<OrgMember[]> {
+  const supabase = createClient();
+  const resolvedOrgId = orgId ?? (await getCurrentOrgId());
+
+  if (!resolvedOrgId) return [];
 
   const { data, error } = await supabase
     .from('accounts')
-    .select('id, name, role')
-    .eq('org_id', orgId)
-    .not('role', 'is', null)
+    .select('id, name, email, role, org_id, created_at')
+    .eq('org_id', resolvedOrgId)
     .order('name', { ascending: true });
 
-  if (error) {
-    throw createProjectsError(PROJECTS_ERROR_MESSAGES.failedToLoadMembers);
-  }
+  if (error) throw error;
 
   return data ?? [];
 }
