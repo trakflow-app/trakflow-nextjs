@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
+  LogIn,
+  LogOut,
   Edit2,
   Eye,
   FolderOpen,
@@ -17,6 +19,12 @@ import {
   updateToolAction,
 } from '@/app/services/tools-services';
 import {
+  checkinToolAction,
+  checkoutToolsAction,
+  type ToolManagementState,
+} from '@/app/services/tools-management-services';
+import {
+  TOOL_CHECKOUT_CONDITION_OPTIONS,
   TOOL_CONDITION_OPTIONS,
   TOOL_PAGE_SIZE_OPTIONS,
   TOOLS_MANAGEMENT,
@@ -53,6 +61,8 @@ import type { ToolAssignmentType, ToolRow, ToolStatus } from '@/lib/dal/tools';
 import { showToast } from '@/lib/toast';
 import {
   TOOL_CONDITION_LABELS,
+  TOOL_CHECKIN_TEXT,
+  TOOL_CHECKOUT_TEXT,
   TOOL_DELETE_TEXT,
   TOOL_DETAILS_TEXT,
   TOOL_EDIT_TEXT,
@@ -69,23 +79,39 @@ type TypeFilterValue = 'all' | ToolAssignmentType;
 type ProjectFilterValue = 'all' | 'inventory' | string;
 type ToolCondition = Database['public']['Enums']['tool_condition'];
 type ToolProject = Pick<ProjectRow, 'id' | 'project_name'>;
+type ToolListRow = ToolRow & ToolManagementState;
+const TOOL_ACTION_BUTTON_CLASS =
+  'flex-1 hover:border-primary hover:bg-primary hover:text-primary-foreground';
 
 type ToolsListProps = {
   tools: ToolRow[];
   projects: ToolProject[];
+  toolManagementStates: Record<string, ToolManagementState>;
+};
+
+const EMPTY_TOOL_MANAGEMENT_STATE: ToolManagementState = {
+  activeCheckoutId: null,
+  activeCheckoutUserName: null,
+  activeCheckoutSessionName: null,
+  checkedOutAt: null,
+  checkoutNotes: null,
 };
 
 /**
  * Client-side tools card grid with search, filters, pagination, and tool actions.
  */
-export function ToolsList({ tools, projects }: ToolsListProps) {
+export function ToolsList({
+  tools,
+  projects,
+  toolManagementStates,
+}: ToolsListProps) {
   /**
    * State management
    */
   const router = useRouter();
-  const [toolOverrides, setToolOverrides] = useState<Record<string, ToolRow>>(
-    {},
-  );
+  const [toolOverrides, setToolOverrides] = useState<
+    Record<string, ToolListRow>
+  >({});
   const [deletedToolIds, setDeletedToolIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -105,8 +131,12 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
   const [pageSize, setPageSize] = useState<number>(
     TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE,
   );
-  const [toolToEdit, setToolToEdit] = useState<ToolRow | null>(null);
-  const [toolToDelete, setToolToDelete] = useState<ToolRow | null>(null);
+  const [toolToCheckout, setToolToCheckout] = useState<ToolListRow | null>(
+    null,
+  );
+  const [toolToCheckin, setToolToCheckin] = useState<ToolListRow | null>(null);
+  const [toolToEdit, setToolToEdit] = useState<ToolListRow | null>(null);
+  const [toolToDelete, setToolToDelete] = useState<ToolListRow | null>(null);
   const [isPending, startTransition] = useTransition();
 
   /**
@@ -136,9 +166,13 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
   const toolsList = useMemo(
     () =>
       tools
-        .map((tool) => toolOverrides[tool.id] ?? tool)
+        .map<ToolListRow>((tool) => ({
+          ...tool,
+          ...(toolManagementStates[tool.id] ?? EMPTY_TOOL_MANAGEMENT_STATE),
+          ...(toolOverrides[tool.id] ?? {}),
+        }))
         .filter((tool) => !deletedToolIds.has(tool.id)),
-    [deletedToolIds, toolOverrides, tools],
+    [deletedToolIds, toolManagementStates, toolOverrides, tools],
   );
 
   /**
@@ -241,12 +275,63 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
    * Callback when a tool is successfully updated.
    * Updates local state immediately, then refreshes server data.
    */
-  function handleToolUpdated(updatedTool: ToolRow) {
+  function handleToolUpdated(updatedTool: ToolListRow) {
     setToolOverrides((currentOverrides) => ({
       ...currentOverrides,
       [updatedTool.id]: updatedTool,
     }));
     setToolToEdit(null);
+    router.refresh();
+  }
+
+  /**
+   * Callback when a tool is successfully checked out.
+   * Updates local state immediately, then refreshes server data.
+   */
+  function handleToolCheckedOut(
+    tool: ToolListRow,
+    condition: ToolCondition,
+    toolManagementId: string | null,
+  ) {
+    setToolOverrides((currentOverrides) => ({
+      ...currentOverrides,
+      [tool.id]: {
+        ...tool,
+        status: 'CHECKEDOUT',
+        condition,
+        activeCheckoutId: toolManagementId,
+        activeCheckoutUserName: null,
+        activeCheckoutSessionName: null,
+        checkedOutAt: null,
+        checkoutNotes: null,
+      },
+    }));
+    setToolToCheckout(null);
+    router.refresh();
+  }
+
+  /**
+   * Callback when a tool is successfully checked in.
+   * Updates local state immediately, then refreshes server data.
+   */
+  function handleToolCheckedIn(tool: ToolListRow, condition: ToolCondition) {
+    setToolOverrides((currentOverrides) => ({
+      ...currentOverrides,
+      [tool.id]: {
+        ...tool,
+        status:
+          condition === 'GOOD' || condition === 'FAIR'
+            ? 'AVAILABLE'
+            : 'OUT_OF_SERVICE',
+        condition,
+        activeCheckoutId: null,
+        activeCheckoutUserName: null,
+        activeCheckoutSessionName: null,
+        checkedOutAt: null,
+        checkoutNotes: null,
+      },
+    }));
+    setToolToCheckin(null);
     router.refresh();
   }
 
@@ -314,6 +399,8 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
                 key={tool.id}
                 tool={tool}
                 onView={() => router.push(`/tools/${tool.id}`)}
+                onCheckout={() => setToolToCheckout(tool)}
+                onCheckin={() => setToolToCheckin(tool)}
                 onEdit={() => setToolToEdit(tool)}
                 onDelete={() => setToolToDelete(tool)}
               />
@@ -371,6 +458,24 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
         </div>
       )}
 
+      <ToolCheckoutDialog
+        tool={toolToCheckout}
+        isPending={isPending}
+        onToolCheckedOut={handleToolCheckedOut}
+        onOpenChange={(open) => {
+          if (!open) setToolToCheckout(null);
+        }}
+        startTransition={startTransition}
+      />
+      <ToolCheckinDialog
+        tool={toolToCheckin}
+        isPending={isPending}
+        onToolCheckedIn={handleToolCheckedIn}
+        onOpenChange={(open) => {
+          if (!open) setToolToCheckin(null);
+        }}
+        startTransition={startTransition}
+      />
       <ToolEditDialog
         tool={toolToEdit}
         projects={projects}
@@ -396,8 +501,10 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
 }
 
 type ToolCardProps = {
-  tool: ToolRow;
+  tool: ToolListRow;
   onView: () => void;
+  onCheckout: () => void;
+  onCheckin: () => void;
   onEdit: () => void;
   onDelete: () => void;
 };
@@ -405,7 +512,17 @@ type ToolCardProps = {
 /**
  * Displays a single tool as a project-style card.
  */
-function ToolCard({ tool, onView, onEdit, onDelete }: ToolCardProps) {
+function ToolCard({
+  tool,
+  onView,
+  onCheckout,
+  onCheckin,
+  onEdit,
+  onDelete,
+}: ToolCardProps) {
+  const canCheckout = tool.status === 'AVAILABLE';
+  const canCheckin = tool.status === 'CHECKEDOUT';
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -436,12 +553,44 @@ function ToolCard({ tool, onView, onEdit, onDelete }: ToolCardProps) {
         />
       </CardContent>
 
-      <CardFooter className="flex gap-2 border-t pt-4">
-        <Button variant="ghost" size="sm" className="flex-1" onClick={onView}>
+      <CardFooter className="flex flex-wrap gap-2 border-t pt-4">
+        <Button
+          variant="outline"
+          size="sm"
+          className={TOOL_ACTION_BUTTON_CLASS}
+          onClick={onView}
+        >
           <Eye data-icon="inline-start" />
           {TOOLS_CARD_TEXT.viewAction}
         </Button>
-        <Button variant="ghost" size="sm" className="flex-1" onClick={onEdit}>
+        {canCheckout ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className={TOOL_ACTION_BUTTON_CLASS}
+            onClick={onCheckout}
+          >
+            <LogOut data-icon="inline-start" />
+            {TOOLS_CARD_TEXT.checkoutAction}
+          </Button>
+        ) : null}
+        {canCheckin ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className={TOOL_ACTION_BUTTON_CLASS}
+            onClick={onCheckin}
+          >
+            <LogIn data-icon="inline-start" />
+            {TOOLS_CARD_TEXT.checkinAction}
+          </Button>
+        ) : null}
+        <Button
+          variant="outline"
+          size="sm"
+          className={TOOL_ACTION_BUTTON_CLASS}
+          onClick={onEdit}
+        >
           <Edit2 data-icon="inline-start" />
           {TOOLS_CARD_TEXT.editAction}
         </Button>
@@ -474,7 +623,7 @@ function ToolMetaRow({ label, value }: ToolMetaRowProps) {
 }
 
 type ToolImageProps = {
-  tool: ToolRow;
+  tool: ToolListRow;
 };
 
 function ToolImage({ tool }: ToolImageProps) {
@@ -505,12 +654,255 @@ function ToolImage({ tool }: ToolImageProps) {
   );
 }
 
+type ToolCheckoutDialogProps = {
+  tool: ToolListRow | null;
+  isPending: boolean;
+  onToolCheckedOut: (
+    tool: ToolListRow,
+    condition: ToolCondition,
+    toolManagementId: string | null,
+  ) => void;
+  onOpenChange: (open: boolean) => void;
+  startTransition: (callback: () => void) => void;
+};
+
+function ToolCheckoutDialog({
+  tool,
+  isPending,
+  onToolCheckedOut,
+  onOpenChange,
+  startTransition,
+}: ToolCheckoutDialogProps) {
+  const defaultCheckoutCondition =
+    tool?.condition && tool.condition !== 'OUT_OF_SERVICE'
+      ? tool.condition
+      : TOOLS_MANAGEMENT.DEFAULTS.TOOL_CONDITION;
+
+  /**
+   * Checks out the selected tool through the management service.
+   */
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!tool) {
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    formData.set(TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.toolId, tool.id);
+
+    startTransition(() => {
+      void (async () => {
+        const result = await checkoutToolsAction(formData);
+
+        if (result?.error) {
+          showToast(result.error, 'error');
+          return;
+        }
+
+        const conditionValue = formData.get(
+          TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.condition,
+        );
+        const condition =
+          typeof conditionValue === 'string'
+            ? (conditionValue as ToolCondition)
+            : tool.condition;
+
+        showToast(TOOLS_ACTION_TEXT.checkoutSuccess, 'success');
+        onToolCheckedOut(tool, condition, result?.toolManagementId ?? null);
+      })();
+    });
+  }
+
+  return (
+    <Dialog open={Boolean(tool)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{TOOL_CHECKOUT_TEXT.title}</DialogTitle>
+          <DialogDescription>
+            {TOOL_CHECKOUT_TEXT.description}
+          </DialogDescription>
+        </DialogHeader>
+
+        {tool ? (
+          <form
+            key={tool.id}
+            className="flex flex-col gap-4"
+            onSubmit={handleSubmit}
+          >
+            <ToolFormField
+              label={TOOL_CHECKOUT_TEXT.conditionLabel}
+              htmlFor={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.condition}
+            >
+              <SelectField
+                id={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.condition}
+                name={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.condition}
+                options={TOOL_CHECKOUT_CONDITION_OPTIONS}
+                defaultValue={defaultCheckoutCondition}
+              />
+            </ToolFormField>
+            <ToolFormField
+              label={TOOL_CHECKOUT_TEXT.sessionNameLabel}
+              htmlFor={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.sessionName}
+            >
+              <Input
+                id={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.sessionName}
+                name={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.sessionName}
+                placeholder={TOOL_CHECKOUT_TEXT.sessionNamePlaceholder}
+              />
+            </ToolFormField>
+            <ToolFormField
+              label={TOOL_CHECKOUT_TEXT.notesLabel}
+              htmlFor={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.notes}
+            >
+              <Textarea
+                id={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.notes}
+                name={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.notes}
+                placeholder={TOOL_CHECKOUT_TEXT.notesPlaceholder}
+              />
+            </ToolFormField>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => onOpenChange(false)}
+              >
+                {TOOL_CHECKOUT_TEXT.cancelButton}
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                <LogOut data-icon="inline-start" />
+                {TOOL_CHECKOUT_TEXT.confirmButton}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type ToolCheckinDialogProps = {
+  tool: ToolListRow | null;
+  isPending: boolean;
+  onToolCheckedIn: (tool: ToolListRow, condition: ToolCondition) => void;
+  onOpenChange: (open: boolean) => void;
+  startTransition: (callback: () => void) => void;
+};
+
+function ToolCheckinDialog({
+  tool,
+  isPending,
+  onToolCheckedIn,
+  onOpenChange,
+  startTransition,
+}: ToolCheckinDialogProps) {
+  /**
+   * Checks the selected tool back in through the management service.
+   */
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!tool) {
+      showToast(TOOLS_ACTION_TEXT.invalidCheckin, 'error');
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    formData.set(TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.toolId, tool.id);
+
+    if (tool.activeCheckoutId) {
+      formData.set(
+        TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.toolManagementId,
+        tool.activeCheckoutId,
+      );
+    }
+
+    startTransition(() => {
+      void (async () => {
+        const result = await checkinToolAction(formData);
+
+        if (result?.error) {
+          showToast(result.error, 'error');
+          return;
+        }
+
+        const conditionValue = formData.get(
+          TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.condition,
+        );
+        const condition =
+          typeof conditionValue === 'string'
+            ? (conditionValue as ToolCondition)
+            : tool.condition;
+
+        showToast(TOOLS_ACTION_TEXT.checkinSuccess, 'success');
+        onToolCheckedIn(tool, condition);
+      })();
+    });
+  }
+
+  return (
+    <Dialog open={Boolean(tool)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{TOOL_CHECKIN_TEXT.title}</DialogTitle>
+          <DialogDescription>{TOOL_CHECKIN_TEXT.description}</DialogDescription>
+        </DialogHeader>
+
+        {tool ? (
+          <form
+            key={tool.id}
+            className="flex flex-col gap-4"
+            onSubmit={handleSubmit}
+          >
+            <ToolFormField
+              label={TOOL_CHECKIN_TEXT.conditionLabel}
+              htmlFor={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.condition}
+            >
+              <SelectField
+                id={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.condition}
+                name={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.condition}
+                options={TOOL_CONDITION_OPTIONS}
+                defaultValue={tool.condition}
+              />
+            </ToolFormField>
+            <ToolFormField
+              label={TOOL_CHECKIN_TEXT.notesLabel}
+              htmlFor={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.notes}
+            >
+              <Textarea
+                id={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.notes}
+                name={TOOLS_MANAGEMENT.MANAGEMENT_FORM_KEYS.notes}
+                placeholder={TOOL_CHECKIN_TEXT.notesPlaceholder}
+              />
+            </ToolFormField>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => onOpenChange(false)}
+              >
+                {TOOL_CHECKIN_TEXT.cancelButton}
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                <LogIn data-icon="inline-start" />
+                {TOOL_CHECKIN_TEXT.confirmButton}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 type ToolEditDialogProps = {
-  tool: ToolRow | null;
+  tool: ToolListRow | null;
   projects: ToolProject[];
   isPending: boolean;
   getProjectName: (projectId: string | null) => string;
-  onToolUpdated: (tool: ToolRow) => void;
+  onToolUpdated: (tool: ToolListRow) => void;
   onOpenChange: (open: boolean) => void;
   startTransition: (callback: () => void) => void;
 };
@@ -580,7 +972,7 @@ function ToolEditDialog({
           typeof projectIdValue !== 'string'
             ? null
             : projectIdValue;
-        const updatedTool: ToolRow = {
+        const updatedTool: ToolListRow = {
           ...tool,
           name: typeof nameValue === 'string' ? nameValue.trim() : tool.name,
           tagNumber:
@@ -728,7 +1120,7 @@ function ToolEditDialog({
 }
 
 type ToolDeleteDialogProps = {
-  tool: ToolRow | null;
+  tool: ToolListRow | null;
   isPending: boolean;
   onToolDeleted: (toolId: string) => void;
   onOpenChange: (open: boolean) => void;
