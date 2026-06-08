@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { CLAIM_INVITE_ERROR_DETAILS, claimInvite } from '@/lib/dal/invites';
 import { CLAIM_ACTION_MESSAGES } from '@/locales/app/join/[token]/action-locales';
+import { DASHBOARD_ROUTE } from '@/constants/components/dashboard/dashboard-constants';
 
 /**
  * State returned by the claim invite server action.
@@ -73,8 +74,8 @@ export async function claimInviteAction(
     .eq('id', user.id)
     .single();
 
-  if (account?.role === 'FOREMAN') redirect('/foreman');
-  if (account?.role === 'CREW') redirect('/crew');
+  if (account?.role === 'FOREMAN') redirect(DASHBOARD_ROUTE);
+  if (account?.role === 'CREW') redirect(DASHBOARD_ROUTE);
 
   redirect('/onboarding');
 }
