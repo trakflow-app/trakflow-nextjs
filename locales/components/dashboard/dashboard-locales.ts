@@ -1,4 +1,5 @@
 export const DASHBOARD_TEXT = {
+  organizationCodePrefix: 'Code:',
   tabsLabel: 'Dashboard sections',
   tabs: {
     dashboard: 'Dashboard',

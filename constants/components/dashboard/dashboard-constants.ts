@@ -13,6 +13,7 @@ export const CREW_MANAGEMENT_ROUTE = '/crew';
 export const OWNER_INVITE_ROUTE = '/owner/invite';
 export const FOREMAN_INVITE_ROUTE = '/foreman/invite';
 export const DEFAULT_ORGANIZATION_NAME = 'Organization';
+export const DEFAULT_ORGANIZATION_CODE = 'N/A';
 export const RECENT_PROJECTS_LIMIT = 4;
 export const UPCOMING_TASKS_LIMIT = 5;
 export const MAX_PROGRESS_PERCENT = 100;

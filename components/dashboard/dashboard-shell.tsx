@@ -14,6 +14,7 @@ import { DASHBOARD_TEXT } from '@/locales/components/dashboard/dashboard-locales
 type DashboardShellProps = {
   children: ReactNode;
   organizationName: string;
+  organizationCode: string;
   userName: string;
   role: DashboardUserRole;
 };
@@ -24,6 +25,7 @@ type DashboardShellProps = {
 export function DashboardShell({
   children,
   organizationName,
+  organizationCode,
   userName,
   role,
 }: DashboardShellProps) {
@@ -47,6 +49,9 @@ export function DashboardShell({
             <div className="min-w-0">
               <p className="truncate text-base font-semibold">
                 {organizationName}
+              </p>
+              <p className="truncate text-sm text-muted-foreground">
+                {DASHBOARD_TEXT.organizationCodePrefix} {organizationCode}
               </p>
             </div>
           </div>
