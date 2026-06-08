@@ -1,12 +1,22 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { CrewCodeCard } from '@/components/crew/crew-code-card';
+import {
+  FOREMAN_INVITE_ROUTE,
+  OWNER_INVITE_ROUTE,
+} from '@/constants/components/dashboard/dashboard-constants';
 import { requireAnyRole } from '@/lib/dal/auth';
+import { getOrgJoinCode } from '@/lib/dal/orgs';
 import { DASHBOARD_TEXT } from '@/locales/components/dashboard/dashboard-locales';
 
 /**
  * Crew management tab for foreman and owner users.
  */
 export default async function CrewManagementPage() {
-  await requireAnyRole(['FOREMAN', 'OWNER']);
+  const { account } = await requireAnyRole(['FOREMAN', 'OWNER']);
+  const joinCode = await getOrgJoinCode();
+  const isOwner = account.role === 'OWNER';
 
   return (
     <main className="bg-muted/30 px-4 py-8 sm:px-6 lg:px-8">
@@ -20,16 +30,44 @@ export default async function CrewManagementPage() {
           </p>
         </div>
 
+        <CrewCodeCard joinCode={joinCode} />
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {DASHBOARD_TEXT.tabs.crew}
+              {isOwner
+                ? DASHBOARD_TEXT.crewManagement.ownerActionsTitle
+                : DASHBOARD_TEXT.crewManagement.foremanActionsTitle}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              {DASHBOARD_TEXT.crewManagement.placeholder}
+              {isOwner
+                ? DASHBOARD_TEXT.crewManagement.ownerActionsDescription
+                : DASHBOARD_TEXT.crewManagement.foremanActionsDescription}
             </p>
+            <div className="flex flex-wrap gap-2">
+              {isOwner ? (
+                <>
+                  <Button asChild>
+                    <Link href={OWNER_INVITE_ROUTE}>
+                      {DASHBOARD_TEXT.crewManagement.addTeamMembersAction}
+                    </Link>
+                  </Button>
+                  <Button variant="outline" asChild>
+                    <Link href={OWNER_INVITE_ROUTE}>
+                      {DASHBOARD_TEXT.crewManagement.pendingInvitesAction}
+                    </Link>
+                  </Button>
+                </>
+              ) : (
+                <Button asChild>
+                  <Link href={FOREMAN_INVITE_ROUTE}>
+                    {DASHBOARD_TEXT.crewManagement.shareCrewCodeAction}
+                  </Link>
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

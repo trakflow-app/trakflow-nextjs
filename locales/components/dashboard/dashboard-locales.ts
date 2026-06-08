@@ -36,6 +36,9 @@ export const DASHBOARD_TEXT = {
     medium: 'medium',
     low: 'low',
   },
+  /**
+   * TODO: Replace with persisted scheduled task data when task management ships.
+   */
   mockTasks: [
     {
       title: 'Foundation inspection - Downtown Office',
@@ -65,7 +68,25 @@ export const DASHBOARD_TEXT = {
   ],
   crewManagement: {
     title: 'Crew',
-    subtitle: 'Manage team members and assignments',
-    placeholder: 'Crew management tools will be built here next.',
+    subtitle: 'Manage crew onboarding and team access',
+    shareCodeTitle: 'Share crew code',
+    shareCodeDescription:
+      'Reveal the organization join code only when you are ready to onboard crew.',
+    shareCodeGuidance:
+      'Share this code only with people who should join this organization.',
+    noCode: 'No join code available.',
+    hiddenCode: 'Code hidden',
+    revealCodeButton: 'Reveal code',
+    hideCodeButton: 'Hide code',
+    copyCodeButton: 'Copy code',
+    codeCopiedButton: 'Copied',
+    ownerActionsTitle: 'Owner onboarding',
+    ownerActionsDescription:
+      'Invite foremen by email and review pending invite links.',
+    addTeamMembersAction: 'Add team members',
+    pendingInvitesAction: 'Pending invites',
+    foremanActionsTitle: 'Foreman onboarding',
+    foremanActionsDescription: 'Open the dedicated share page for crew joins.',
+    shareCrewCodeAction: 'Share crew code',
   },
 } as const;
