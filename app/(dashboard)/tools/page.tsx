@@ -2,8 +2,7 @@ import { ToolCreateButton } from '@/components/tools/tool-create-button';
 import { ToolsList } from '@/components/tools/tools-list';
 import { ToolsStatsGrid } from '@/components/tools/tools-stats-grid';
 import { requireOrgMember } from '@/lib/dal/auth';
-import { getProjects } from '@/lib/dal/projects';
-import { getTools } from '@/lib/dal/tools';
+import { getToolProjects, getTools } from '@/lib/dal/tools';
 import type { Database } from '@/lib/types/database.types';
 import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
@@ -30,7 +29,7 @@ export default async function ToolsPage() {
   const canManageToolRecords = canManageTools(account.role);
   const [tools, projects] = await Promise.all([
     getTools(orgId),
-    getProjects(orgId),
+    getToolProjects(orgId),
   ]);
 
   return (

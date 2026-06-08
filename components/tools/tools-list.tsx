@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
@@ -12,6 +12,7 @@ import {
   FolderOpen,
   RotateCcw,
   Trash2,
+  Upload,
   Wrench,
 } from 'lucide-react';
 import {
@@ -660,12 +661,13 @@ function ToolCheckoutDialog({
               />
             </ToolFormField>
             <ToolFormField
-              label={TOOL_CHECKOUT_TEXT.sessionNameLabel}
+              label={TOOL_CHECKOUT_TEXT.workActivityLabel}
               htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.checkoutSessionName}
             >
               <Input
                 id={TOOLS_MANAGEMENT.FORM_KEYS.checkoutSessionName}
                 name={TOOLS_MANAGEMENT.FORM_KEYS.checkoutSessionName}
+                placeholder={TOOL_CHECKOUT_TEXT.workActivityPlaceholder}
               />
             </ToolFormField>
             <ToolFormField
@@ -675,6 +677,7 @@ function ToolCheckoutDialog({
               <Textarea
                 id={TOOLS_MANAGEMENT.FORM_KEYS.checkoutNotes}
                 name={TOOLS_MANAGEMENT.FORM_KEYS.checkoutNotes}
+                placeholder={TOOL_CHECKOUT_TEXT.notesPlaceholder}
               />
             </ToolFormField>
             <DialogFooter>
@@ -704,6 +707,26 @@ function ToolReturnDialog({
   onOpenChange,
   startTransition,
 }: ToolWorkflowDialogProps) {
+  const [evidenceFileName, setEvidenceFileName] = useState('');
+
+  /**
+   * Tracks the selected return evidence filename for display.
+   */
+  function handleEvidenceChange(event: ChangeEvent<HTMLInputElement>) {
+    setEvidenceFileName(event.target.files?.[0]?.name ?? '');
+  }
+
+  /**
+   * Clears local evidence selection state when the return dialog closes.
+   */
+  function handleOpenChange(open: boolean) {
+    if (!open) {
+      setEvidenceFileName('');
+    }
+
+    onOpenChange(open);
+  }
+
   /**
    * Checks in the selected tool through the workflow RPC.
    */
@@ -736,13 +759,14 @@ function ToolReturnDialog({
         }
 
         showToast(TOOLS_ACTION_TEXT.returnSuccess, 'success');
+        setEvidenceFileName('');
         onActionComplete();
       })();
     });
   }
 
   return (
-    <Dialog open={Boolean(tool)} onOpenChange={onOpenChange}>
+    <Dialog open={Boolean(tool)} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{TOOL_RETURN_TEXT.title}</DialogTitle>
@@ -769,12 +793,30 @@ function ToolReturnDialog({
               label={TOOL_RETURN_TEXT.evidenceImageLabel}
               htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
             >
-              <Input
-                id={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
-                name={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
-                type="file"
-                accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
-              />
+              <div className="flex flex-col gap-2">
+                <Input
+                  id={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+                  name={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+                  type="file"
+                  accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
+                  className="sr-only"
+                  onChange={handleEvidenceChange}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" variant="outline" asChild>
+                    <label
+                      htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+                      className="cursor-pointer"
+                    >
+                      <Upload data-icon="inline-start" />
+                      {TOOL_RETURN_TEXT.evidenceImageButton}
+                    </label>
+                  </Button>
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                    {evidenceFileName || TOOL_RETURN_TEXT.noEvidenceSelected}
+                  </span>
+                </div>
+              </div>
             </ToolFormField>
             <ToolFormField
               label={TOOL_RETURN_TEXT.notesLabel}
@@ -783,6 +825,7 @@ function ToolReturnDialog({
               <Textarea
                 id={TOOLS_MANAGEMENT.FORM_KEYS.returnNotes}
                 name={TOOLS_MANAGEMENT.FORM_KEYS.returnNotes}
+                placeholder={TOOL_RETURN_TEXT.notesPlaceholder}
               />
             </ToolFormField>
             <DialogFooter>

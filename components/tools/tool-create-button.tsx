@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { Plus, Upload } from 'lucide-react';
 import { createToolAction } from '@/app/services/tools-services';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,6 +49,7 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
    */
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [imageFileName, setImageFileName] = useState('');
   const [isPending, startTransition] = useTransition();
 
   /**
@@ -67,6 +68,24 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
     ],
     [projects],
   );
+
+  /**
+   * Clears local upload state when the create dialog closes.
+   */
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      setImageFileName('');
+    }
+
+    setOpen(nextOpen);
+  }
+
+  /**
+   * Tracks the selected tool image filename for display.
+   */
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    setImageFileName(event.target.files?.[0]?.name ?? '');
+  }
 
   /**
    * Creates a new tool and refreshes the tools page on success.
@@ -96,6 +115,7 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
 
         showToast(TOOLS_ACTION_TEXT.createSuccess, 'success');
         form.reset();
+        setImageFileName('');
         setOpen(false);
         router.refresh();
       })();
@@ -103,7 +123,7 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button>
           <Plus data-icon="inline-start" />
@@ -124,6 +144,7 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
               <Input
                 id={TOOLS_MANAGEMENT.FORM_KEYS.name}
                 name={TOOLS_MANAGEMENT.FORM_KEYS.name}
+                placeholder={TOOL_CREATE_TEXT.namePlaceholder}
                 required
               />
             </ToolCreateFormField>
@@ -136,6 +157,7 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
                 name={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
                 type="number"
                 min={TOOLS_MANAGEMENT.LIMITS.MIN_TAG_NUMBER}
+                placeholder={TOOL_CREATE_TEXT.tagNumberPlaceholder}
                 required
               />
             </ToolCreateFormField>
@@ -177,12 +199,30 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
             label={TOOL_CREATE_TEXT.imageAttachmentLabel}
             htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
           >
-            <Input
-              id={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
-              name={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
-              type="file"
-              accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
-            />
+            <div className="flex flex-col gap-2">
+              <Input
+                id={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+                type="file"
+                accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
+                className="sr-only"
+                onChange={handleImageChange}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" asChild>
+                  <label
+                    htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+                    className="cursor-pointer"
+                  >
+                    <Upload data-icon="inline-start" />
+                    {TOOL_CREATE_TEXT.imageAttachmentButton}
+                  </label>
+                </Button>
+                <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                  {imageFileName || TOOL_CREATE_TEXT.noImageSelected}
+                </span>
+              </div>
+            </div>
           </ToolCreateFormField>
           <ToolCreateFormField
             label={TOOL_CREATE_TEXT.notesLabel}
@@ -191,6 +231,7 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
             <Textarea
               id={TOOLS_MANAGEMENT.FORM_KEYS.notes}
               name={TOOLS_MANAGEMENT.FORM_KEYS.notes}
+              placeholder={TOOL_CREATE_TEXT.notesPlaceholder}
             />
           </ToolCreateFormField>
           <DialogFooter>

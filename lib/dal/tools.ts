@@ -9,6 +9,8 @@ export type ToolStatus = Database['public']['Enums']['tool_status'];
 export type ToolCondition = Database['public']['Enums']['tool_condition'];
 export type ToolAssignmentType = 'INVENTORY' | 'ASSIGNED';
 
+const TOOL_PROJECT_SELECT_COLUMNS = 'id, project_name';
+
 export type ToolRow = {
   id: string;
   name: string;
@@ -21,6 +23,11 @@ export type ToolRow = {
   notes: string | null;
   imagePath: string | null;
   imageStoragePath: string | null;
+};
+
+export type ToolProjectRow = {
+  id: string;
+  project_name: string;
 };
 
 type ToolWithProject = Database['public']['Tables']['tools']['Row'] & {
@@ -82,6 +89,25 @@ export async function getTools(orgId: string): Promise<ToolRow[]> {
   return Promise.all(
     (toolsData ?? []).map((tool) => mapToolRow(supabase, tool)),
   );
+}
+
+/**
+ * Fetches project options used by the tools management surface.
+ */
+export async function getToolProjects(orgId: string): Promise<ToolProjectRow[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select(TOOL_PROJECT_SELECT_COLUMNS)
+    .eq('org_id', orgId)
+    .order('project_name', { ascending: true });
+
+  if (error) {
+    throw new Error(TOOLS_PAGE_TEXT.loadFailed);
+  }
+
+  return data ?? [];
 }
 
 /**
