@@ -84,6 +84,9 @@ type ProjectFilterValue = 'all' | 'inventory' | string;
 type ToolCondition = Database['public']['Enums']['tool_condition'];
 type ToolProject = Pick<ProjectRow, 'id' | 'project_name'>;
 
+const EDIT_TOOL_IMAGE_INPUT_ID = `${TOOLS_MANAGEMENT.FORM_KEYS.imageFile}-edit`;
+const RETURN_TOOL_IMAGE_INPUT_ID = `${TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}-return`;
+
 type ToolsListProps = {
   tools: ToolRow[];
   projects: ToolProject[];
@@ -791,11 +794,11 @@ function ToolReturnDialog({
             </ToolFormField>
             <ToolFormField
               label={TOOL_RETURN_TEXT.evidenceImageLabel}
-              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+              htmlFor={RETURN_TOOL_IMAGE_INPUT_ID}
             >
               <div className="flex flex-col gap-2">
                 <Input
-                  id={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+                  id={RETURN_TOOL_IMAGE_INPUT_ID}
                   name={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
                   type="file"
                   accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
@@ -805,7 +808,7 @@ function ToolReturnDialog({
                 <div className="flex flex-wrap items-center gap-2">
                   <Button type="button" variant="outline" asChild>
                     <label
-                      htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+                      htmlFor={RETURN_TOOL_IMAGE_INPUT_ID}
                       className="cursor-pointer"
                     >
                       <Upload data-icon="inline-start" />
@@ -867,6 +870,8 @@ function ToolEditDialog({
   onOpenChange,
   startTransition,
 }: ToolEditDialogProps) {
+  const [imageFileName, setImageFileName] = useState('');
+
   /**
    * Builds project options for the edit form assignment field.
    */
@@ -883,6 +888,24 @@ function ToolEditDialog({
     ],
     [projects],
   );
+
+  /**
+   * Tracks the selected replacement tool image filename for display.
+   */
+  function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
+    setImageFileName(event.target.files?.[0]?.name ?? '');
+  }
+
+  /**
+   * Clears local upload state when the edit dialog closes.
+   */
+  function handleOpenChange(open: boolean) {
+    if (!open) {
+      setImageFileName('');
+    }
+
+    onOpenChange(open);
+  }
 
   /**
    * Submits tool edits and mirrors the updated fields locally on success.
@@ -957,13 +980,14 @@ function ToolEditDialog({
         };
 
         showToast(TOOLS_ACTION_TEXT.updateSuccess, 'success');
+        setImageFileName('');
         onToolUpdated(updatedTool);
       })();
     });
   }
 
   return (
-    <Dialog open={Boolean(tool)} onOpenChange={onOpenChange}>
+    <Dialog open={Boolean(tool)} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{TOOL_EDIT_TEXT.title}</DialogTitle>
@@ -985,6 +1009,7 @@ function ToolEditDialog({
                   id={TOOLS_MANAGEMENT.FORM_KEYS.name}
                   name={TOOLS_MANAGEMENT.FORM_KEYS.name}
                   defaultValue={tool.name}
+                  placeholder={TOOL_EDIT_TEXT.namePlaceholder}
                   required
                 />
               </ToolFormField>
@@ -998,6 +1023,7 @@ function ToolEditDialog({
                   type="number"
                   min={TOOLS_MANAGEMENT.LIMITS.MIN_TAG_NUMBER}
                   defaultValue={tool.tagNumber}
+                  placeholder={TOOL_EDIT_TEXT.tagNumberPlaceholder}
                   required
                 />
               </ToolFormField>
@@ -1040,14 +1066,32 @@ function ToolEditDialog({
             </div>
             <ToolFormField
               label={TOOL_EDIT_TEXT.imageAttachmentLabel}
-              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+              htmlFor={EDIT_TOOL_IMAGE_INPUT_ID}
             >
-              <Input
-                id={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
-                name={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
-                type="file"
-                accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
-              />
+              <div className="flex flex-col gap-2">
+                <Input
+                  id={EDIT_TOOL_IMAGE_INPUT_ID}
+                  name={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+                  type="file"
+                  accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
+                  className="sr-only"
+                  onChange={handleImageChange}
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" variant="outline" asChild>
+                    <label
+                      htmlFor={EDIT_TOOL_IMAGE_INPUT_ID}
+                      className="cursor-pointer"
+                    >
+                      <Upload data-icon="inline-start" />
+                      {TOOL_EDIT_TEXT.imageAttachmentButton}
+                    </label>
+                  </Button>
+                  <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                    {imageFileName || TOOL_EDIT_TEXT.noImageSelected}
+                  </span>
+                </div>
+              </div>
             </ToolFormField>
             <ToolFormField
               label={TOOL_EDIT_TEXT.notesLabel}
@@ -1057,6 +1101,7 @@ function ToolEditDialog({
                 id={TOOLS_MANAGEMENT.FORM_KEYS.notes}
                 name={TOOLS_MANAGEMENT.FORM_KEYS.notes}
                 defaultValue={tool.notes ?? ''}
+                placeholder={TOOL_EDIT_TEXT.notesPlaceholder}
               />
             </ToolFormField>
             <DialogFooter>

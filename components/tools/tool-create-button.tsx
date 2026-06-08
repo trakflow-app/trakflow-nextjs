@@ -36,6 +36,8 @@ import {
 
 type ToolProject = Pick<ProjectRow, 'id' | 'project_name'>;
 
+const CREATE_TOOL_IMAGE_INPUT_ID = `${TOOLS_MANAGEMENT.FORM_KEYS.imageFile}-create`;
+
 type ToolCreateButtonProps = {
   projects: ToolProject[];
 };
@@ -197,11 +199,11 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
           </div>
           <ToolCreateFormField
             label={TOOL_CREATE_TEXT.imageAttachmentLabel}
-            htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+            htmlFor={CREATE_TOOL_IMAGE_INPUT_ID}
           >
             <div className="flex flex-col gap-2">
               <Input
-                id={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+                id={CREATE_TOOL_IMAGE_INPUT_ID}
                 name={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
                 type="file"
                 accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
@@ -211,7 +213,7 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" variant="outline" asChild>
                   <label
-                    htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.imageFile}
+                    htmlFor={CREATE_TOOL_IMAGE_INPUT_ID}
                     className="cursor-pointer"
                   >
                     <Upload data-icon="inline-start" />
