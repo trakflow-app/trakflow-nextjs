@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { DASHBOARD_ROUTE } from '@/constants/components/dashboard/dashboard-constants';
 
 const INTERNAL_REDIRECT_PREFIX = '/';
 const PROTOCOL_RELATIVE_PREFIX = '//';
@@ -130,7 +131,7 @@ export async function signupForeman(
 
   // Revalidate and redirect
   revalidatePath('/', 'layout');
-  redirect('/foreman');
+  redirect(DASHBOARD_ROUTE);
 }
 
 /**
@@ -186,7 +187,7 @@ export async function signupCrew(
 
   // Revalidate and redirect
   revalidatePath('/', 'layout');
-  redirect('/crew');
+  redirect(DASHBOARD_ROUTE);
 }
 
 /**
@@ -242,9 +243,9 @@ export async function login(
   }
 
   const roleRedirects: Record<string, string> = {
-    OWNER: '/owner',
-    FOREMAN: '/foreman',
-    CREW: '/crew',
+    OWNER: DASHBOARD_ROUTE,
+    FOREMAN: DASHBOARD_ROUTE,
+    CREW: DASHBOARD_ROUTE,
   };
 
   if (role && roleRedirects[role]) {

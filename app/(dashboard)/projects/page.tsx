@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProjectsList } from '@/components/projects/projects-list';
 import { requireOrgMember } from '@/lib/dal/auth';
-import { getProjects } from '@/lib/dal/projects';
+import { getServerProjects } from '@/lib/dal/projects-server';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ const NEW_PROJECT_BUTTON = 'New Project';
  */
 export default async function ProjectsPage() {
   const { account } = await requireOrgMember();
-  const projects = await getProjects(account.org_id as string);
+  const projects = await getServerProjects(account.org_id as string);
 
   return (
     <div className="min-h-screen bg-background px-6 py-8">

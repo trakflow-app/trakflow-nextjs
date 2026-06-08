@@ -1,5 +1,11 @@
 import { ReactNode } from 'react';
-import { getAuthenticatedUser } from '@/lib/auth/actions';
+import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import {
+  DEFAULT_ORGANIZATION_CODE,
+  DEFAULT_ORGANIZATION_NAME,
+  type DashboardUserRole,
+} from '@/constants/components/dashboard/dashboard-constants';
+import { requireOrgMember } from '@/lib/dal/auth';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -15,7 +21,22 @@ interface DashboardLayoutProps {
 export default async function DashboardLayout({
   children,
 }: DashboardLayoutProps) {
-  await createClient();
-  await getAuthenticatedUser();
-  return <>{children}</>;
+  const { account } = await requireOrgMember();
+  const supabase = await createClient();
+  const { data: organization } = await supabase
+    .from('organizations')
+    .select('name, join_code')
+    .eq('id', account.org_id as string)
+    .single();
+
+  return (
+    <DashboardShell
+      organizationName={organization?.name ?? DEFAULT_ORGANIZATION_NAME}
+      organizationCode={organization?.join_code ?? DEFAULT_ORGANIZATION_CODE}
+      userName={account.name}
+      role={account.role as DashboardUserRole}
+    >
+      {children}
+    </DashboardShell>
+  );
 }
