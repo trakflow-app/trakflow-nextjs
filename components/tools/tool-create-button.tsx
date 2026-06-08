@@ -26,6 +26,7 @@ import {
   TOOL_STATUS_OPTIONS,
 } from '@/constants/components/tools/tools-constants';
 import type { ProjectRow } from '@/lib/dal/projects';
+import { compressToolCatalogImage } from '@/lib/image-compression';
 import { showToast } from '@/lib/toast';
 import {
   TOOL_CREATE_TEXT,
@@ -77,7 +78,16 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
 
     startTransition(() => {
       void (async () => {
-        const result = await createToolAction(formData);
+        const preparedFormData = await prepareToolImageFormData(formData).catch(
+          () => null,
+        );
+
+        if (!preparedFormData) {
+          showToast(TOOLS_ACTION_TEXT.imageInvalid, 'error');
+          return;
+        }
+
+        const result = await createToolAction(preparedFormData);
 
         if (result?.error) {
           showToast(result.error, 'error');
@@ -197,6 +207,22 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * Compresses the optional tool image before submitting the server action.
+ */
+async function prepareToolImageFormData(formData: FormData): Promise<FormData> {
+  const imageFile = formData.get(TOOLS_MANAGEMENT.FORM_KEYS.imageFile);
+
+  if (!(imageFile instanceof File) || imageFile.size === 0) {
+    return formData;
+  }
+
+  const compressedImage = await compressToolCatalogImage(imageFile);
+  formData.set(TOOLS_MANAGEMENT.FORM_KEYS.imageFile, compressedImage);
+
+  return formData;
 }
 
 type ToolCreateFormFieldProps = {

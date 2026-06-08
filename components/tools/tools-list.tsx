@@ -6,17 +6,24 @@ import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   Edit2,
   Eye,
   FolderOpen,
+  RotateCcw,
   Trash2,
   Wrench,
 } from 'lucide-react';
+import {
+  checkoutToolAction,
+  returnToolAction,
+} from '@/app/services/tools-management-services';
 import {
   deleteToolAction,
   updateToolAction,
 } from '@/app/services/tools-services';
 import {
+  TOOL_CHECKOUT_CONDITION_OPTIONS,
   TOOL_CONDITION_OPTIONS,
   TOOL_PAGE_SIZE_OPTIONS,
   TOOLS_MANAGEMENT,
@@ -50,12 +57,18 @@ import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import { Textarea } from '@/components/ui/textarea';
 import type { ProjectRow } from '@/lib/dal/projects';
 import type { ToolAssignmentType, ToolRow, ToolStatus } from '@/lib/dal/tools';
+import {
+  compressToolCatalogImage,
+  compressToolEvidenceImage,
+} from '@/lib/image-compression';
 import { showToast } from '@/lib/toast';
 import {
+  TOOL_CHECKOUT_TEXT,
   TOOL_CONDITION_LABELS,
   TOOL_DELETE_TEXT,
   TOOL_DETAILS_TEXT,
   TOOL_EDIT_TEXT,
+  TOOL_RETURN_TEXT,
   TOOLS_CARD_TEXT,
   TOOLS_PAGINATION_TEXT,
   TOOLS_PAGE_TEXT,
@@ -73,12 +86,13 @@ type ToolProject = Pick<ProjectRow, 'id' | 'project_name'>;
 type ToolsListProps = {
   tools: ToolRow[];
   projects: ToolProject[];
+  canManageTools: boolean;
 };
 
 /**
  * Client-side tools card grid with search, filters, pagination, and tool actions.
  */
-export function ToolsList({ tools, projects }: ToolsListProps) {
+export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
   /**
    * State management
    */
@@ -105,6 +119,8 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
   const [pageSize, setPageSize] = useState<number>(
     TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE,
   );
+  const [toolToCheckout, setToolToCheckout] = useState<ToolRow | null>(null);
+  const [toolToReturn, setToolToReturn] = useState<ToolRow | null>(null);
   const [toolToEdit, setToolToEdit] = useState<ToolRow | null>(null);
   const [toolToDelete, setToolToDelete] = useState<ToolRow | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -313,7 +329,10 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
               <ToolCard
                 key={tool.id}
                 tool={tool}
+                canManageTools={canManageTools}
                 onView={() => router.push(`/tools/${tool.id}`)}
+                onCheckout={() => setToolToCheckout(tool)}
+                onReturn={() => setToolToReturn(tool)}
                 onEdit={() => setToolToEdit(tool)}
                 onDelete={() => setToolToDelete(tool)}
               />
@@ -382,6 +401,30 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
         }}
         startTransition={startTransition}
       />
+      <ToolCheckoutDialog
+        tool={toolToCheckout}
+        isPending={isPending}
+        onActionComplete={() => {
+          setToolToCheckout(null);
+          router.refresh();
+        }}
+        onOpenChange={(open) => {
+          if (!open) setToolToCheckout(null);
+        }}
+        startTransition={startTransition}
+      />
+      <ToolReturnDialog
+        tool={toolToReturn}
+        isPending={isPending}
+        onActionComplete={() => {
+          setToolToReturn(null);
+          router.refresh();
+        }}
+        onOpenChange={(open) => {
+          if (!open) setToolToReturn(null);
+        }}
+        startTransition={startTransition}
+      />
       <ToolDeleteDialog
         tool={toolToDelete}
         isPending={isPending}
@@ -397,7 +440,10 @@ export function ToolsList({ tools, projects }: ToolsListProps) {
 
 type ToolCardProps = {
   tool: ToolRow;
+  canManageTools: boolean;
   onView: () => void;
+  onCheckout: () => void;
+  onReturn: () => void;
   onEdit: () => void;
   onDelete: () => void;
 };
@@ -405,7 +451,15 @@ type ToolCardProps = {
 /**
  * Displays a single tool as a project-style card.
  */
-function ToolCard({ tool, onView, onEdit, onDelete }: ToolCardProps) {
+function ToolCard({
+  tool,
+  canManageTools,
+  onView,
+  onCheckout,
+  onReturn,
+  onEdit,
+  onDelete,
+}: ToolCardProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -436,24 +490,55 @@ function ToolCard({ tool, onView, onEdit, onDelete }: ToolCardProps) {
         />
       </CardContent>
 
-      <CardFooter className="flex gap-2 border-t pt-4">
+      <CardFooter className="flex flex-wrap gap-2 border-t pt-4">
         <Button variant="ghost" size="sm" className="flex-1" onClick={onView}>
           <Eye data-icon="inline-start" />
           {TOOLS_CARD_TEXT.viewAction}
         </Button>
-        <Button variant="ghost" size="sm" className="flex-1" onClick={onEdit}>
-          <Edit2 data-icon="inline-start" />
-          {TOOLS_CARD_TEXT.editAction}
-        </Button>
-        <Button
-          variant="danger"
-          size="sm"
-          className="flex-1"
-          onClick={onDelete}
-        >
-          <Trash2 data-icon="inline-start" />
-          {TOOLS_CARD_TEXT.deleteAction}
-        </Button>
+        {tool.status === 'AVAILABLE' ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={onCheckout}
+          >
+            <ClipboardCheck data-icon="inline-start" />
+            {TOOLS_CARD_TEXT.checkoutAction}
+          </Button>
+        ) : null}
+        {tool.status === 'CHECKEDOUT' ? (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={onReturn}
+          >
+            <RotateCcw data-icon="inline-start" />
+            {TOOLS_CARD_TEXT.checkinAction}
+          </Button>
+        ) : null}
+        {canManageTools ? (
+          <>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={onEdit}
+            >
+              <Edit2 data-icon="inline-start" />
+              {TOOLS_CARD_TEXT.editAction}
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              className="flex-1"
+              onClick={onDelete}
+            >
+              <Trash2 data-icon="inline-start" />
+              {TOOLS_CARD_TEXT.deleteAction}
+            </Button>
+          </>
+        ) : null}
       </CardFooter>
     </Card>
   );
@@ -502,6 +587,221 @@ function ToolImage({ tool }: ToolImageProps) {
         </span>
       </div>
     </div>
+  );
+}
+
+type ToolWorkflowDialogProps = {
+  tool: ToolRow | null;
+  isPending: boolean;
+  onActionComplete: () => void;
+  onOpenChange: (open: boolean) => void;
+  startTransition: (callback: () => void) => void;
+};
+
+function ToolCheckoutDialog({
+  tool,
+  isPending,
+  onActionComplete,
+  onOpenChange,
+  startTransition,
+}: ToolWorkflowDialogProps) {
+  /**
+   * Checks out the selected tool through the workflow RPC.
+   */
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!tool) {
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    formData.set(TOOLS_MANAGEMENT.FORM_KEYS.toolId, tool.id);
+
+    startTransition(() => {
+      void (async () => {
+        const result = await checkoutToolAction(formData);
+
+        if (result?.error) {
+          showToast(result.error, 'error');
+          return;
+        }
+
+        showToast(TOOLS_ACTION_TEXT.checkoutSuccess, 'success');
+        onActionComplete();
+      })();
+    });
+  }
+
+  return (
+    <Dialog open={Boolean(tool)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{TOOL_CHECKOUT_TEXT.title}</DialogTitle>
+          <DialogDescription>
+            {TOOL_CHECKOUT_TEXT.description}
+          </DialogDescription>
+        </DialogHeader>
+        {tool ? (
+          <form
+            key={tool.id}
+            className="flex flex-col gap-4"
+            onSubmit={handleSubmit}
+          >
+            <ToolFormField
+              label={TOOL_CHECKOUT_TEXT.conditionLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.checkoutCondition}
+            >
+              <SelectField
+                id={TOOLS_MANAGEMENT.FORM_KEYS.checkoutCondition}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.checkoutCondition}
+                options={TOOL_CHECKOUT_CONDITION_OPTIONS}
+                defaultValue={TOOLS_MANAGEMENT.DEFAULTS.TOOL_CONDITION}
+              />
+            </ToolFormField>
+            <ToolFormField
+              label={TOOL_CHECKOUT_TEXT.sessionNameLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.checkoutSessionName}
+            >
+              <Input
+                id={TOOLS_MANAGEMENT.FORM_KEYS.checkoutSessionName}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.checkoutSessionName}
+              />
+            </ToolFormField>
+            <ToolFormField
+              label={TOOL_CHECKOUT_TEXT.notesLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.checkoutNotes}
+            >
+              <Textarea
+                id={TOOLS_MANAGEMENT.FORM_KEYS.checkoutNotes}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.checkoutNotes}
+              />
+            </ToolFormField>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => onOpenChange(false)}
+              >
+                {TOOL_CHECKOUT_TEXT.cancelButton}
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {TOOL_CHECKOUT_TEXT.confirmButton}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ToolReturnDialog({
+  tool,
+  isPending,
+  onActionComplete,
+  onOpenChange,
+  startTransition,
+}: ToolWorkflowDialogProps) {
+  /**
+   * Checks in the selected tool through the workflow RPC.
+   */
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!tool) {
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    formData.set(TOOLS_MANAGEMENT.FORM_KEYS.toolId, tool.id);
+
+    startTransition(() => {
+      void (async () => {
+        const preparedFormData = await prepareReturnImageFormData(
+          formData,
+        ).catch(() => null);
+
+        if (!preparedFormData) {
+          showToast(TOOLS_ACTION_TEXT.imageInvalid, 'error');
+          return;
+        }
+
+        const result = await returnToolAction(preparedFormData);
+
+        if (result?.error) {
+          showToast(result.error, 'error');
+          return;
+        }
+
+        showToast(TOOLS_ACTION_TEXT.returnSuccess, 'success');
+        onActionComplete();
+      })();
+    });
+  }
+
+  return (
+    <Dialog open={Boolean(tool)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{TOOL_RETURN_TEXT.title}</DialogTitle>
+          <DialogDescription>{TOOL_RETURN_TEXT.description}</DialogDescription>
+        </DialogHeader>
+        {tool ? (
+          <form
+            key={tool.id}
+            className="flex flex-col gap-4"
+            onSubmit={handleSubmit}
+          >
+            <ToolFormField
+              label={TOOL_RETURN_TEXT.conditionLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.returnCondition}
+            >
+              <SelectField
+                id={TOOLS_MANAGEMENT.FORM_KEYS.returnCondition}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.returnCondition}
+                options={TOOL_CONDITION_OPTIONS}
+                defaultValue={TOOLS_MANAGEMENT.DEFAULTS.TOOL_CONDITION}
+              />
+            </ToolFormField>
+            <ToolFormField
+              label={TOOL_RETURN_TEXT.evidenceImageLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+            >
+              <Input
+                id={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}
+                type="file"
+                accept={TOOLS_MANAGEMENT.FILES.IMAGE_ACCEPT}
+              />
+            </ToolFormField>
+            <ToolFormField
+              label={TOOL_RETURN_TEXT.notesLabel}
+              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.returnNotes}
+            >
+              <Textarea
+                id={TOOLS_MANAGEMENT.FORM_KEYS.returnNotes}
+                name={TOOLS_MANAGEMENT.FORM_KEYS.returnNotes}
+              />
+            </ToolFormField>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={() => onOpenChange(false)}
+              >
+                {TOOL_RETURN_TEXT.cancelButton}
+              </Button>
+              <Button type="submit" disabled={isPending}>
+                {TOOL_RETURN_TEXT.confirmButton}
+              </Button>
+            </DialogFooter>
+          </form>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -556,7 +856,16 @@ function ToolEditDialog({
 
     startTransition(() => {
       void (async () => {
-        const result = await updateToolAction(formData);
+        const preparedFormData = await prepareToolImageFormData(formData).catch(
+          () => null,
+        );
+
+        if (!preparedFormData) {
+          showToast(TOOLS_ACTION_TEXT.imageInvalid, 'error');
+          return;
+        }
+
+        const result = await updateToolAction(preparedFormData);
 
         if (result?.error) {
           showToast(result.error, 'error');
@@ -725,6 +1034,40 @@ function ToolEditDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * Compresses the optional tool image before submitting the server action.
+ */
+async function prepareToolImageFormData(formData: FormData): Promise<FormData> {
+  const imageFile = formData.get(TOOLS_MANAGEMENT.FORM_KEYS.imageFile);
+
+  if (!(imageFile instanceof File) || imageFile.size === 0) {
+    return formData;
+  }
+
+  const compressedImage = await compressToolCatalogImage(imageFile);
+  formData.set(TOOLS_MANAGEMENT.FORM_KEYS.imageFile, compressedImage);
+
+  return formData;
+}
+
+/**
+ * Compresses the optional return evidence image before submitting the server action.
+ */
+async function prepareReturnImageFormData(
+  formData: FormData,
+): Promise<FormData> {
+  const imageFile = formData.get(TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile);
+
+  if (!(imageFile instanceof File) || imageFile.size === 0) {
+    return formData;
+  }
+
+  const compressedImage = await compressToolEvidenceImage(imageFile);
+  formData.set(TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile, compressedImage);
+
+  return formData;
 }
 
 type ToolDeleteDialogProps = {

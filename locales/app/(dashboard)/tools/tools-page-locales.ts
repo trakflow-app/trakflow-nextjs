@@ -24,6 +24,8 @@ export const TOOLS_CARD_TEXT = {
   viewAction: 'View',
   editAction: 'Edit',
   deleteAction: 'Delete',
+  checkoutAction: 'Check out',
+  checkinAction: 'Check in',
   tagPrefix: 'Tag',
   assignedProjectLabel: 'Project',
   inventoryProjectLabel: 'Inventory',
@@ -86,6 +88,27 @@ export const TOOL_DELETE_TEXT = {
   cancelButton: 'Cancel',
 };
 
+export const TOOL_CHECKOUT_TEXT = {
+  title: 'Check Out Tool',
+  description:
+    'Record the current condition before this tool leaves inventory.',
+  conditionLabel: 'Checkout condition',
+  sessionNameLabel: 'Session name',
+  notesLabel: 'Notes',
+  cancelButton: 'Cancel',
+  confirmButton: 'Check out',
+};
+
+export const TOOL_RETURN_TEXT = {
+  title: 'Check In Tool',
+  description: 'Record the return condition and optional evidence photo.',
+  conditionLabel: 'Return condition',
+  evidenceImageLabel: 'Evidence photo',
+  notesLabel: 'Notes',
+  cancelButton: 'Cancel',
+  confirmButton: 'Check in',
+};
+
 export const TOOLS_PAGINATION_TEXT = {
   pageSizeLabel: 'Rows per page',
   previousButton: 'Previous',
@@ -95,12 +118,23 @@ export const TOOLS_PAGINATION_TEXT = {
 
 export const TOOLS_ACTION_TEXT = {
   invalidTool: 'Enter valid tool details.',
+  invalidCheckout: 'Enter valid checkout details.',
+  invalidReturn: 'Enter valid return details.',
+  unauthorized: 'You do not have permission to manage tools.',
+  imageTooLarge: 'Upload a smaller tool image.',
+  imageInvalid: 'Upload a valid image file.',
+  imageUploadFailed: 'Failed to upload the tool image.',
+  evidenceUploadFailed: 'Failed to upload the evidence photo.',
   createFailed: 'Failed to create tool.',
   createSuccess: 'Tool created.',
   updateFailed: 'Failed to update tool.',
   updateSuccess: 'Tool updated.',
   deleteFailed: 'Failed to delete tool.',
   deleteSuccess: 'Tool deleted.',
+  checkoutFailed: 'Failed to check out tool.',
+  checkoutSuccess: 'Tool checked out.',
+  returnFailed: 'Failed to check in tool.',
+  returnSuccess: 'Tool checked in.',
 };
 
 export const TOOLS_STATS_TEXT = {

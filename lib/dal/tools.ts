@@ -3,6 +3,7 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/lib/types/database.types';
 import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
+import { createSignedToolImageUrl } from '@/lib/storage/tool-images';
 
 export type ToolStatus = Database['public']['Enums']['tool_status'];
 export type ToolCondition = Database['public']['Enums']['tool_condition'];
@@ -19,13 +20,25 @@ export type ToolRow = {
   type: ToolAssignmentType;
   notes: string | null;
   imagePath: string | null;
+  imageStoragePath: string | null;
 };
 
 type ToolWithProject = Database['public']['Tables']['tools']['Row'] & {
   projects: { project_name: string } | null;
 };
 
-function mapToolRow(tool: ToolWithProject): ToolRow {
+/**
+ * Maps a tool database row to the UI shape with a signed image URL.
+ */
+async function mapToolRow(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  tool: ToolWithProject,
+): Promise<ToolRow> {
+  const signedImageUrl = await createSignedToolImageUrl(
+    supabase,
+    tool.image_path,
+  );
+
   return {
     id: tool.id,
     name: tool.name,
@@ -36,7 +49,8 @@ function mapToolRow(tool: ToolWithProject): ToolRow {
     projectName: tool.projects?.project_name ?? TOOLS_PAGE_TEXT.inventoryType,
     type: tool.project_id ? 'ASSIGNED' : 'INVENTORY',
     notes: tool.notes,
-    imagePath: tool.image_path,
+    imagePath: signedImageUrl,
+    imageStoragePath: tool.image_path,
   };
 }
 
@@ -65,7 +79,9 @@ export async function getTools(orgId: string): Promise<ToolRow[]> {
 
   const toolsData = data as unknown as ToolWithProject[];
 
-  return (toolsData ?? []).map(mapToolRow);
+  return Promise.all(
+    (toolsData ?? []).map((tool) => mapToolRow(supabase, tool)),
+  );
 }
 
 /**
@@ -96,5 +112,5 @@ export async function getToolById(
     throw new Error(TOOLS_PAGE_TEXT.loadFailed);
   }
 
-  return mapToolRow(data as unknown as ToolWithProject);
+  return mapToolRow(supabase, data as unknown as ToolWithProject);
 }
