@@ -223,11 +223,7 @@ export async function createToolAction(
     let imagePath: string;
 
     try {
-      imagePath = await uploadToolCatalogImage(
-        supabase,
-        tool.id,
-        values.imageFile,
-      );
+      imagePath = await uploadToolCatalogImage(supabase, values.imageFile);
     } catch {
       await supabase
         .from('tools')
@@ -291,7 +287,7 @@ export async function updateToolAction(
 
   if (values.imageFile) {
     try {
-      imagePath = await uploadToolCatalogImage(supabase, id, values.imageFile);
+      imagePath = await uploadToolCatalogImage(supabase, values.imageFile);
     } catch {
       return { error: TOOLS_ACTION_TEXT.imageUploadFailed };
     }

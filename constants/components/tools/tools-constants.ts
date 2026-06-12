@@ -20,7 +20,7 @@ export const TOOLS_MANAGEMENT = {
     TOOL_IMAGES_BUCKET: 'tool-images',
     TOOL_EVIDENCE_BUCKET: 'tool-evidence',
     TOOL_IMAGES_PATH_PREFIX: 'tools',
-    TOOL_MAIN_IMAGE_FILE_NAME: 'main.webp',
+    TOOL_CATALOG_IMAGES_PATH_PREFIX: 'catalog',
     SIGNED_URL_EXPIRES_IN_SECONDS: 3_600,
   },
   FILTERS: {
@@ -36,6 +36,10 @@ export const TOOLS_MANAGEMENT = {
   LIMITS: {
     MIN_TAG_NUMBER: 1,
     IMAGE_PLACEHOLDER_SIZE: 48,
+  },
+  IMAGE_SIZES: {
+    CARD: '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw',
+    DETAIL: '(min-width: 1024px) 768px, 100vw',
   },
   FILES: {
     IMAGE_ACCEPT: 'image/*',

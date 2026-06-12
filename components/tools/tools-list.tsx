@@ -63,6 +63,7 @@ import {
   compressToolEvidenceImage,
 } from '@/lib/image-compression';
 import { showToast } from '@/lib/toast';
+import { getToolDetailPath } from '@/lib/routes/tools';
 import {
   TOOL_CHECKOUT_TEXT,
   TOOL_CONDITION_LABELS,
@@ -334,7 +335,7 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
                 key={tool.id}
                 tool={tool}
                 canManageTools={canManageTools}
-                onView={() => router.push(`/tools/${tool.id}`)}
+                onView={() => router.push(getToolDetailPath(tool.id))}
                 onCheckout={() => setToolToCheckout(tool)}
                 onReturn={() => setToolToReturn(tool)}
                 onEdit={() => setToolToEdit(tool)}
@@ -574,6 +575,7 @@ function ToolImage({ tool }: ToolImageProps) {
         alt={tool.name}
         aspectRatio="video"
         rounded="md"
+        sizes={TOOLS_MANAGEMENT.IMAGE_SIZES.CARD}
         className="bg-muted"
       />
     );

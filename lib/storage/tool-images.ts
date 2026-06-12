@@ -7,8 +7,10 @@ import type { Database } from '@/lib/types/database.types';
 /**
  * Builds the private storage path for the main catalog image of a tool.
  */
-export function getToolImagePath(toolId: string) {
-  return `${TOOLS_MANAGEMENT.STORAGE.TOOL_IMAGES_PATH_PREFIX}/${toolId}/${TOOLS_MANAGEMENT.STORAGE.TOOL_MAIN_IMAGE_FILE_NAME}`;
+export function getToolImagePath() {
+  const imageId = crypto.randomUUID();
+
+  return `${TOOLS_MANAGEMENT.STORAGE.TOOL_CATALOG_IMAGES_PATH_PREFIX}/${imageId}.${TOOLS_MANAGEMENT.FILES.COMPRESSED_IMAGE_EXTENSION}`;
 }
 
 /**
@@ -16,10 +18,9 @@ export function getToolImagePath(toolId: string) {
  */
 export async function uploadToolCatalogImage(
   supabase: SupabaseClient<Database>,
-  toolId: string,
   imageFile: File,
 ): Promise<string> {
-  const imagePath = getToolImagePath(toolId);
+  const imagePath = getToolImagePath();
   const imageBody = await imageFile.arrayBuffer();
   const { error } = await supabase.storage
     .from(TOOLS_MANAGEMENT.STORAGE.TOOL_IMAGES_BUCKET)
