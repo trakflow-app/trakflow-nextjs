@@ -31,9 +31,10 @@ export async function uploadToolEvidenceImage(
   imagePath: string,
   imageFile: File,
 ): Promise<string> {
+  const imageBody = await imageFile.arrayBuffer();
   const { error } = await supabase.storage
     .from(TOOLS_MANAGEMENT.STORAGE.TOOL_EVIDENCE_BUCKET)
-    .upload(imagePath, imageFile, {
+    .upload(imagePath, imageBody, {
       contentType: imageFile.type,
       upsert: false,
     });

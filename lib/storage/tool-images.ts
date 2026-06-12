@@ -20,9 +20,10 @@ export async function uploadToolCatalogImage(
   imageFile: File,
 ): Promise<string> {
   const imagePath = getToolImagePath(toolId);
+  const imageBody = await imageFile.arrayBuffer();
   const { error } = await supabase.storage
     .from(TOOLS_MANAGEMENT.STORAGE.TOOL_IMAGES_BUCKET)
-    .upload(imagePath, imageFile, {
+    .upload(imagePath, imageBody, {
       contentType: imageFile.type,
       upsert: true,
     });
