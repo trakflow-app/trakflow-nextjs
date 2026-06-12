@@ -94,7 +94,9 @@ export async function getTools(orgId: string): Promise<ToolRow[]> {
 /**
  * Fetches project options used by the tools management surface.
  */
-export async function getToolProjects(orgId: string): Promise<ToolProjectRow[]> {
+export async function getToolProjects(
+  orgId: string,
+): Promise<ToolProjectRow[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase

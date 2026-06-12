@@ -11,9 +11,7 @@ type ToolDetailPageProps = {
 /**
  * Tool detail page scoped by authenticated org membership.
  */
-export default async function ToolDetailPage({
-  params,
-}: ToolDetailPageProps) {
+export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
   const { id } = await params;
 
   if (!isValidToolId(id)) {
