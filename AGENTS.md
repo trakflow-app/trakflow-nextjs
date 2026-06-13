@@ -52,6 +52,15 @@ This file contains all coding conventions and project guidelines for TrakFlow. A
   - `public/` — Static assets.
   - `constants/` — (if used) for shared constants like colors, numbers, etc.
 
+  ## Backend/Data Boundaries
+
+- `lib/dal/*` is for data access only: read queries, narrow writes when unavoidable, and mapping database rows into app types.
+- `app/services/*` is for business workflows: server actions, mutations, permission checks, cache invalidation, storage coordination, and RPC orchestration.
+- `supabase/migrations/*` owns database schema, RLS, indexes, triggers, and database functions.
+- Supabase functions should be used only for atomic, security-sensitive, or concurrency-sensitive workflows.
+- Do not put UI behavior, page-specific copy, or component state in DAL or Supabase functions.
+- Add new database changes as new migrations. Do not edit old migrations after they may have been applied.
+
 ---
 
 **All team members must read and follow these conventions. For questions or suggestions, update this file so the whole team stays in sync.**
