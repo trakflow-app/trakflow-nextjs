@@ -2,14 +2,11 @@ import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
 import type {
-  OrgMember,
   ProjectDetailMaterial,
   ProjectDetailTool,
-  ProjectMaterial,
   ProjectOption,
   ProjectRow,
   ProjectTeamMember,
-  ProjectTool,
 } from '@/lib/dal/projects';
 
 const PROJECTS_SELECT_COLUMNS = 'id, project_name';
