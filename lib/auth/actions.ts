@@ -258,7 +258,7 @@ export async function login(
 }
 
 /**
- * Logs out the current user and sends them to login.
+ * Logs out the current user and sends them home.
  */
 export async function logout() {
   // Create Supabase client on the server
@@ -270,8 +270,8 @@ export async function logout() {
   // Refresh cached layout data after logout
   revalidatePath('/', 'layout');
 
-  // Send the user back to the login page
-  redirect('/login');
+  // Send the user back to the home page
+  redirect('/');
 }
 
 /**
