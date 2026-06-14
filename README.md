@@ -23,6 +23,7 @@ This app is designed to run locally for development. You’ll need Node.js and a
 ## Tech Stack Docs
 
 For the current stack overview and the project documentation map, see `docs/tech-stack.md`.
+For app-level rules around organizations, projects, materials, tools, and invites, see `docs/business-logic.md`.
 
 ## Required Software
 

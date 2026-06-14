@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PROJECT_DETAIL_MESSAGES } from '@/locales/app/(dashboard)/projects/[id]/page-locales';
-import type { ProjectMaterial } from '@/lib/dal/projects';
+import type { ProjectDetailMaterial } from '@/lib/dal/projects';
 
 const { materials } = PROJECT_DETAIL_MESSAGES;
 
@@ -27,7 +27,7 @@ function formatCurrency(amount: number): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface ProjectMaterialsSectionProps {
-  materials: ProjectMaterial[];
+  materials: ProjectDetailMaterial[];
 }
 
 /**

@@ -1,7 +1,7 @@
 import { Users } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PROJECT_DETAIL_MESSAGES } from '@/locales/app/(dashboard)/projects/[id]/page-locales';
-import type { OrgMember } from '@/lib/dal/projects';
+import type { ProjectTeamMember } from '@/lib/dal/projects';
 import type { Database } from '@/lib/types/database.types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -19,7 +19,7 @@ const ROLE_BADGE_CLASSES: Record<UserRole, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface ProjectTeamSectionProps {
-  members: OrgMember[];
+  members: ProjectTeamMember[];
 }
 
 /**

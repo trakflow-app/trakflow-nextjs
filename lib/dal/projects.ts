@@ -17,6 +17,15 @@ export type ProjectRow = Database['public']['Tables']['projects']['Row'];
 export type ProjectTool = Database['public']['Tables']['tools']['Row'];
 export type ProjectMaterial = Database['public']['Tables']['materials']['Row'];
 export type OrgMember = Database['public']['Tables']['accounts']['Row'];
+export type ProjectDetailTool = Pick<
+  ProjectTool,
+  'condition' | 'id' | 'name' | 'status' | 'tag_number'
+>;
+export type ProjectDetailMaterial = Pick<
+  ProjectMaterial,
+  'id' | 'low_stock_threshold' | 'name' | 'unit_cost' | 'unit_qty'
+>;
+export type ProjectTeamMember = Pick<OrgMember, 'id' | 'name' | 'role'>;
 
 /**
  * Loads the current user's organization id.
