@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Box, TrendingDown, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/numeric-formatting';
-import { MaterialUI } from '@/lib/dal/materials';
+import type { MaterialUI } from '@/lib/types/materials-types';
 import { statsGrid } from '@/locales/components/materials/stats-grid-locales';
 
 type Props = { materials: MaterialUI[] };

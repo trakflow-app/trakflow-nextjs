@@ -13,12 +13,13 @@ import { MaterialUsageForm } from './MaterialUsageForm';
 import { logMaterialUsageAction } from '@/app/services/materials-services';
 import { MaterialUsageSubmitData } from '@/lib/types/materials-types';
 import { materialUsageModalLocales } from '@/locales/components/materials/materials-usage-modal-locales';
-import { type MaterialUI } from '@/lib/dal/materials';
+import { type MaterialUI } from '@/lib/types/materials-types';
 interface MaterialUsageModalProps {
   isOpen: boolean;
   onClose: () => void;
   materialId: string | null;
   materials: MaterialUI[];
+  projects: Array<{ id: string; name: string }>;
   onSubmitSuccess?: (data: MaterialUsageSubmitData) => void;
 }
 
@@ -32,6 +33,7 @@ export function MaterialUsageModal({
   onClose,
   materialId,
   materials,
+  projects,
   onSubmitSuccess,
 }: MaterialUsageModalProps) {
   /**
@@ -116,7 +118,8 @@ export function MaterialUsageModal({
               materialId={materialId!}
               projectName={selectedMaterial.projectName}
               currentQuantity={selectedMaterial.quantity}
-              defaultProjectId={selectedMaterial.projectId || ''}
+              defaultProjectId={selectedMaterial.projectId}
+              projectOptions={projects}
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
             />

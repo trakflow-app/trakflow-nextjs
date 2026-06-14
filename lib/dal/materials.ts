@@ -1,45 +1,56 @@
-import { createClient } from '@/lib/supabase/client';
-import { Database } from '@/lib/types/database.types';
+import 'server-only';
 
-// Define the UI type (what the component expects)
-export type MaterialUI = {
-  id: string;
-  name: string;
-  projectId: string | null;
-  projectName: string;
-  quantity: number;
-  minQuantity: number;
-  unitCost: number;
-  totalValue: number;
-  unit: string;
-};
+import { createClient } from '@/lib/supabase/server';
+import type { MaterialUI } from '@/lib/types/materials-types';
+import { Database } from '@/lib/types/database.types';
+import { materialsTable } from '@/locales/components/materials/materials-table-locales';
+
+const MATERIALS_SELECT_COLUMNS = `
+  id,
+  project_id,
+  name,
+  unit_qty,
+  unit_cost,
+  low_stock_threshold,
+  projects (
+    project_name
+  )
+`;
 
 // Define the exact shape Supabase returns from the JOIN
 type MaterialWithProject = Database['public']['Tables']['materials']['Row'] & {
   projects: { project_name: string } | null;
 };
 
+function mapMaterialRow(material: MaterialWithProject): MaterialUI {
+  return {
+    id: material.id,
+    name: material.name,
+    projectId: material.project_id,
+    projectName:
+      material.projects?.project_name || materialsTable.orgInventoryLabel,
+    quantity: material.unit_qty,
+    minQuantity: material.low_stock_threshold,
+    unitCost: material.unit_cost,
+    totalValue: material.unit_qty * material.unit_cost,
+  };
+}
+
 /**
- * Fetches materials for a specific organization.
+ * Fetches materials for a specific organization using the server session.
  * Uses the foreign key to 'projects' to get the project_name.
  */
-export async function fetchMaterials(
+export async function getServerMaterials(
   orgId: string,
   projectId?: string | null,
 ): Promise<MaterialUI[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   let query = supabase
     .from('materials')
-    .select(
-      `
-      *,
-      projects (
-        project_name
-      )
-    `,
-    )
-    .eq('org_id', orgId);
+    .select(MATERIALS_SELECT_COLUMNS)
+    .eq('org_id', orgId)
+    .order('created_at', { ascending: false });
 
   if (projectId) {
     query = query.eq('project_id', projectId);
@@ -51,15 +62,5 @@ export async function fetchMaterials(
 
   const materialsData = data as unknown as MaterialWithProject[];
 
-  return (materialsData || []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    projectId: m.project_id,
-    projectName: m.projects?.project_name || 'Unassigned',
-    quantity: m.unit_qty,
-    minQuantity: m.low_stock_threshold,
-    unitCost: m.unit_cost,
-    totalValue: m.unit_qty * m.unit_cost,
-    unit: 'units',
-  }));
+  return (materialsData || []).map(mapMaterialRow);
 }

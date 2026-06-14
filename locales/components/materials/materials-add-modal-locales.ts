@@ -6,9 +6,11 @@ export const materialsAddModalLocales = {
   description: 'Create a new material inventory item.',
   materialNameLabel: 'Material Name',
   materialNamePlaceholder: 'Concrete, lumber, screws...',
-  projectLabel: 'Project',
-  projectPlaceholder: 'Select a project',
-  noProjectsAvailable: 'Create a project before adding materials.',
+  projectLabel: 'Inventory Location',
+  projectPlaceholder: 'Select inventory location',
+  orgInventoryOption: 'Org inventory',
+  noProjectsAvailable:
+    'No projects are available yet. This material can still be added to org inventory.',
   quantityLabel: 'Quantity',
   unitCostLabel: 'Unit Cost',
   lowStockLabel: 'Low Stock',
@@ -19,7 +21,6 @@ export const materialsAddModalLocales = {
   createFailed: 'Failed to create material',
   validation: {
     nameRequired: 'Material name is required',
-    projectRequired: 'Please select a project',
     quantityMinimum: 'Quantity cannot be negative',
     unitCostRequired: 'Unit cost must be greater than 0',
     lowStockMinimum: 'Low stock cannot be negative',

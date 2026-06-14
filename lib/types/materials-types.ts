@@ -4,6 +4,20 @@ import { createUsageSchema } from '@/lib/validations/materials-validations';
 import { SubmitHandler } from 'react-hook-form';
 
 /**
+ * Material inventory shape consumed by dashboard UI components.
+ */
+export type MaterialUI = {
+  id: string;
+  name: string;
+  projectId: string | null;
+  projectName: string;
+  quantity: number;
+  minQuantity: number;
+  unitCost: number;
+  totalValue: number;
+};
+
+/**
  * Derive types from the Zod schema - single source of truth.
  */
 type SchemaType = ReturnType<typeof createUsageSchema>;
@@ -33,7 +47,8 @@ export interface MaterialUsageFormProps {
   currentQuantity: number;
   onSubmit: SubmitHandler<MaterialUsageSubmitData>;
   isSubmitting: boolean;
-  defaultProjectId: string;
+  defaultProjectId: string | null;
+  projectOptions: Array<{ id: string; name: string }>;
 }
 
 // You CAN reference database types if needed

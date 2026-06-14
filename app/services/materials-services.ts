@@ -2,8 +2,9 @@
 
 import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { type MaterialUI } from '@/lib/dal/materials';
+import { type MaterialUI } from '@/lib/types/materials-types';
 import { type Database } from '@/lib/types/database.types';
+import { materialsTable } from '@/locales/components/materials/materials-table-locales';
 
 const MATERIAL_SERVICE_ERRORS = {
   missingServerConfig: 'Missing Supabase server configuration',
@@ -204,11 +205,10 @@ export async function updateMaterialAction(params: {
     id: data.id,
     name: data.name,
     projectId: data.project_id,
-    projectName: data.projects?.project_name || 'Unassigned',
+    projectName: data.projects?.project_name || materialsTable.orgInventoryLabel,
     quantity: data.unit_qty,
     minQuantity: data.low_stock_threshold,
     unitCost: data.unit_cost,
     totalValue: data.unit_qty * data.unit_cost,
-    unit: 'units',
   };
 }

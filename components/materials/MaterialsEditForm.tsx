@@ -17,7 +17,7 @@ import {
   editMaterialSchema,
   EditMaterialFormInput,
 } from '@/lib/validations/materials-validations';
-import { MaterialUI } from '@/lib/dal/materials';
+import type { MaterialUI } from '@/lib/types/materials-types';
 import { materialEditFormLocales } from '@/locales/components/materials/materials-edit-form-locales';
 
 interface MaterialEditFormProps {

@@ -11,7 +11,6 @@ export const createUsageSchema = (maxQty: number) =>
       .positive('Quantity must be greater than 0')
       .max(maxQty, `Only ${maxQty} units available`),
     notes: z.string().optional(),
-    unit: z.string().min(1, 'Please specify a unit'),
   });
 
 export type UsageFormInput = z.infer<ReturnType<typeof createUsageSchema>>;

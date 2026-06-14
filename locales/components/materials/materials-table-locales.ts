@@ -2,7 +2,8 @@ export const materialsTable = {
   lowStock: 'Low Stock',
   inStock: 'In Stock',
   materialHeader: 'Material',
-  projectHeader: 'Project',
+  inventoryLocationHeader: 'Inventory Location',
+  orgInventoryLabel: 'Org inventory',
   quantityHeader: 'Quantity',
   unitCostHeader: 'Unit Cost',
   totalValueHeader: 'Total Value',
@@ -10,4 +11,6 @@ export const materialsTable = {
   actionsHeader: 'Action',
   logUsageAction: 'Log Usage',
   editAction: 'Edit',
+  minimumQuantityLabel: 'Min Qty:',
+  currentQuantityLabel: 'Current Qty:',
 };

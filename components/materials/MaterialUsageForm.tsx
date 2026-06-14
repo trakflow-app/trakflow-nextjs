@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useEffect, useMemo } from 'react';
+import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import { calculateRemainingQuantity } from '@/lib/utils/materials-utils';
 import { createUsageSchema } from '@/lib/validations/materials-validations';
 import {
@@ -34,7 +35,20 @@ export function MaterialUsageForm({
   onSubmit,
   isSubmitting,
   defaultProjectId,
+  projectOptions,
 }: MaterialUsageFormProps) {
+  const isProjectSpecificMaterial = Boolean(defaultProjectId);
+  const consumingProjectOptions = useMemo<SelectOption[]>(
+    () =>
+      projectOptions.map((project) => ({
+        label: project.name,
+        value: project.id,
+      })),
+    [projectOptions],
+  );
+  const canLogUsage =
+    isProjectSpecificMaterial || consumingProjectOptions.length > 0;
+
   // Memoize schema to prevent recreation on every render
   const usageSchema = useMemo(
     () => createUsageSchema(currentQuantity),
@@ -60,9 +74,7 @@ export function MaterialUsageForm({
 
   // Update project when modal opens with specific material
   useEffect(() => {
-    if (defaultProjectId) {
-      form.setValue('projectId', defaultProjectId);
-    }
+    form.setValue('projectId', defaultProjectId ?? '');
   }, [defaultProjectId, form]);
 
   // Wrap submit to inject materialId
@@ -77,10 +89,42 @@ export function MaterialUsageForm({
         className="space-y-4"
       >
         <div className="grid grid-cols-2 gap-4">
-          <FormItem>
-            <FormLabel>{materialUsageFormLocales.projectLabel}</FormLabel>
-            <Input value={projectName} readOnly className="bg-muted" />
-          </FormItem>
+          {isProjectSpecificMaterial ? (
+            <FormItem>
+              <FormLabel>
+                {materialUsageFormLocales.projectAssignmentLabel}
+              </FormLabel>
+              <Input value={projectName} readOnly className="bg-muted" />
+            </FormItem>
+          ) : (
+            <FormField
+              control={form.control}
+              name="projectId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {materialUsageFormLocales.projectSelectionLabel}
+                  </FormLabel>
+                  <FormControl>
+                    <SelectField
+                      options={consumingProjectOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder={materialUsageFormLocales.projectPlaceholder}
+                      disabled={isSubmitting}
+                      className="w-full"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                  {!canLogUsage && (
+                    <p className="text-sm text-muted-foreground">
+                      {materialUsageFormLocales.noProjectsAvailable}
+                    </p>
+                  )}
+                </FormItem>
+              )}
+            />
+          )}
 
           <FormItem>
             <FormLabel>{materialUsageFormLocales.inStockLabel}</FormLabel>
@@ -162,7 +206,7 @@ export function MaterialUsageForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={isSubmitting || isOverLimit}
+            disabled={isSubmitting || isOverLimit || !canLogUsage}
           >
             {isSubmitting
               ? materialUsageFormLocales.logging

@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { MaterialEditForm } from '@/components/materials/MaterialsEditForm';
-import { type MaterialUI } from '@/lib/dal/materials';
+import { type MaterialUI } from '@/lib/types/materials-types';
 import { EditMaterialFormInput } from '@/lib/validations/materials-validations';
 import { updateMaterialAction } from '@/app/services/materials-services';
 import { materialEditModalLocales } from '@/locales/components/materials/materials-edit-modal-locales';

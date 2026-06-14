@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/numeric-formatting';
 import { Box, History, Edit2, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { MaterialUI } from '@/lib/dal/materials';
+import type { MaterialUI } from '@/lib/types/materials-types';
 import { materialsTable } from '@/locales/components/materials/materials-table-locales';
 
 type Props = {
@@ -113,15 +113,21 @@ export default function MaterialsTable({
               <div className="grid grid-cols-2 gap-4 border-y border-border py-2">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Quantity
+                    {materialsTable.currentQuantityLabel}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
-                    {material.quantity} {material.unit}
+                    {material.quantity}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {materialsTable.minimumQuantityLabel}
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {material.minQuantity}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Total Value
+                    {materialsTable.totalValueHeader}
                   </p>
                   <p className="text-sm font-semibold text-primary">
                     {formatCurrency(totalValue)}
@@ -134,14 +140,15 @@ export default function MaterialsTable({
                   onClick={() => onLogUsage(material.id)}
                   className="h-9 flex-1 gap-2"
                 >
-                  <History className="w-3 h-3" /> Log Usage
+                  <History className="w-3 h-3" />{' '}
+                  {materialsTable.logUsageAction}
                 </Button>
                 <Button
                   onClick={() => onEdit(material.id)}
                   variant="outline"
                   className="h-9 flex-1 gap-2"
                 >
-                  <Edit2 className="w-3 h-3" /> Edit
+                  <Edit2 className="w-3 h-3" /> {materialsTable.editAction}
                 </Button>
               </div>
             </div>
@@ -158,7 +165,7 @@ export default function MaterialsTable({
                 {materialsTable.materialHeader}
               </TableHead>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
-                {materialsTable.projectHeader}
+                {materialsTable.inventoryLocationHeader}
               </TableHead>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
                 {materialsTable.quantityHeader}
@@ -195,9 +202,6 @@ export default function MaterialsTable({
                         <div className="font-bold text-slate-900 truncate">
                           {material.name}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-medium uppercase truncate">
-                          {material.unit}
-                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -209,7 +213,8 @@ export default function MaterialsTable({
                       {material.quantity}
                     </div>
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-                      Min: {material.minQuantity}
+                      {materialsTable.minimumQuantityLabel}{' '}
+                      {material.minQuantity}
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 tabular-nums text-muted-foreground">
