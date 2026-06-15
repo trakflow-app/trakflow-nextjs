@@ -2,9 +2,23 @@ import { ToolCreateButton } from '@/components/tools/tool-create-button';
 import { ToolsList } from '@/components/tools/tools-list';
 import { ToolsStatsGrid } from '@/components/tools/tools-stats-grid';
 import { requireOrgMember } from '@/lib/dal/auth';
-import { getServerProjects } from '@/lib/dal/projects-server';
-import { getTools } from '@/lib/dal/tools';
+import { getToolProjects, getTools } from '@/lib/dal/tools';
+import type { Database } from '@/lib/types/database.types';
 import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
+
+type ToolManagerRole = 'OWNER' | 'FOREMAN';
+
+const TOOL_MANAGER_ROLES = [
+  'OWNER',
+  'FOREMAN',
+] as const satisfies readonly ToolManagerRole[];
+
+/**
+ * Checks whether the account role can mutate tool inventory records.
+ */
+function canManageTools(role: Database['public']['Enums']['user_role'] | null) {
+  return TOOL_MANAGER_ROLES.includes(role as ToolManagerRole);
+}
 
 /**
  * Tools page that fetches organization tools and renders inventory summaries.
@@ -12,9 +26,10 @@ import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-loca
 export default async function ToolsPage() {
   const { account } = await requireOrgMember();
   const orgId = account.org_id as string;
+  const canManageToolRecords = canManageTools(account.role);
   const [tools, projects] = await Promise.all([
     getTools(orgId),
-    getServerProjects(orgId),
+    getToolProjects(orgId),
   ]);
 
   return (
@@ -29,11 +44,17 @@ export default async function ToolsPage() {
               {TOOLS_PAGE_TEXT.subtitle}
             </p>
           </div>
-          <ToolCreateButton projects={projects} />
+          {canManageToolRecords ? (
+            <ToolCreateButton projects={projects} />
+          ) : null}
         </div>
 
         <ToolsStatsGrid tools={tools} />
-        <ToolsList tools={tools} projects={projects} />
+        <ToolsList
+          tools={tools}
+          projects={projects}
+          canManageTools={canManageToolRecords}
+        />
       </div>
     </div>
   );

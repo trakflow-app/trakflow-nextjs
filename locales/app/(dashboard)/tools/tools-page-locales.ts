@@ -24,6 +24,8 @@ export const TOOLS_CARD_TEXT = {
   viewAction: 'View',
   editAction: 'Edit',
   deleteAction: 'Delete',
+  checkoutAction: 'Check out',
+  checkinAction: 'Check in',
   tagPrefix: 'Tag',
   assignedProjectLabel: 'Project',
   inventoryProjectLabel: 'Inventory',
@@ -54,12 +56,17 @@ export const TOOL_EDIT_TEXT = {
   title: 'Edit Tool',
   description: 'Update the tool details and project assignment.',
   nameLabel: 'Name',
+  namePlaceholder: 'Example: Cordless drill',
   tagNumberLabel: 'Tag number',
+  tagNumberPlaceholder: 'Example: 1042',
   projectLabel: 'Project',
   imageAttachmentLabel: 'Image attachment',
+  imageAttachmentButton: 'Replace photo',
+  noImageSelected: 'Current photo stays unless you upload a new one',
   statusLabel: 'Status',
   conditionLabel: 'Condition',
   notesLabel: 'Notes',
+  notesPlaceholder: 'Update serial number, storage location, or handling notes',
   cancelButton: 'Cancel',
   saveButton: 'Save changes',
 };
@@ -68,12 +75,17 @@ export const TOOL_CREATE_TEXT = {
   title: 'Add Tool',
   description: 'Create a tool record and assign it to inventory or a project.',
   nameLabel: 'Name',
+  namePlaceholder: 'Example: Cordless drill',
   tagNumberLabel: 'Tag number',
+  tagNumberPlaceholder: 'Example: 1042',
   projectLabel: 'Project',
   imageAttachmentLabel: 'Image attachment',
+  imageAttachmentButton: 'Upload photo',
+  noImageSelected: 'No photo selected',
   statusLabel: 'Status',
   conditionLabel: 'Condition',
   notesLabel: 'Notes',
+  notesPlaceholder: 'Add serial number, storage location, or handling notes',
   cancelButton: 'Cancel',
   createButton: 'Create tool',
 };
@@ -86,6 +98,32 @@ export const TOOL_DELETE_TEXT = {
   cancelButton: 'Cancel',
 };
 
+export const TOOL_CHECKOUT_TEXT = {
+  title: 'Check Out Tool',
+  description:
+    'Record the current condition before this tool leaves inventory.',
+  conditionLabel: 'Checkout condition',
+  workActivityLabel: 'Work activity',
+  workActivityPlaceholder: 'Example: Morning pickup or Level 2 framing',
+  notesLabel: 'Notes',
+  notesPlaceholder: 'Add who is taking it, where it is going, or any issues',
+  cancelButton: 'Cancel',
+  confirmButton: 'Check out',
+};
+
+export const TOOL_RETURN_TEXT = {
+  title: 'Check In Tool',
+  description: 'Record the return condition and optional evidence photo.',
+  conditionLabel: 'Return condition',
+  evidenceImageLabel: 'Evidence photo',
+  evidenceImageButton: 'Upload photo',
+  noEvidenceSelected: 'No photo selected',
+  notesLabel: 'Notes',
+  notesPlaceholder: 'Add damage details, missing parts, or return notes',
+  cancelButton: 'Cancel',
+  confirmButton: 'Check in',
+};
+
 export const TOOLS_PAGINATION_TEXT = {
   pageSizeLabel: 'Rows per page',
   previousButton: 'Previous',
@@ -95,12 +133,23 @@ export const TOOLS_PAGINATION_TEXT = {
 
 export const TOOLS_ACTION_TEXT = {
   invalidTool: 'Enter valid tool details.',
+  invalidCheckout: 'Enter valid checkout details.',
+  invalidReturn: 'Enter valid return details.',
+  unauthorized: 'You do not have permission to manage tools.',
+  imageTooLarge: 'Upload a smaller tool image.',
+  imageInvalid: 'Upload a valid image file.',
+  imageUploadFailed: 'Failed to upload the tool image.',
+  evidenceUploadFailed: 'Failed to upload the evidence photo.',
   createFailed: 'Failed to create tool.',
   createSuccess: 'Tool created.',
   updateFailed: 'Failed to update tool.',
   updateSuccess: 'Tool updated.',
   deleteFailed: 'Failed to delete tool.',
   deleteSuccess: 'Tool deleted.',
+  checkoutFailed: 'Failed to check out tool.',
+  checkoutSuccess: 'Tool checked out.',
+  returnFailed: 'Failed to check in tool.',
+  returnSuccess: 'Tool checked in.',
 };
 
 export const TOOLS_STATS_TEXT = {
