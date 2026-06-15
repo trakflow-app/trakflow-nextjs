@@ -54,6 +54,16 @@ export function MaterialUsageModal({
     }
   }, [isOpen]);
 
+  function handleOpenChange(open: boolean) {
+    if (!open && isSubmitting) {
+      return;
+    }
+
+    if (!open) {
+      onClose();
+    }
+  }
+
   /**
    * Handle form submission
    * Validates data, sends to backend, and manages UI state
@@ -92,7 +102,7 @@ export function MaterialUsageModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{materialUsageModalLocales.title}</DialogTitle>

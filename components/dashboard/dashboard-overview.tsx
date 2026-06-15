@@ -4,10 +4,7 @@ import {
   type UpcomingTask,
 } from '@/components/dashboard/upcoming-tasks-card';
 import type { ProjectRow } from '@/lib/dal/projects';
-import {
-  RECENT_PROJECTS_LIMIT,
-  UPCOMING_TASKS_LIMIT,
-} from '@/constants/components/dashboard/dashboard-constants';
+import { UPCOMING_TASKS_LIMIT } from '@/constants/components/dashboard/dashboard-constants';
 import { DASHBOARD_TEXT } from '@/locales/components/dashboard/dashboard-locales';
 
 type DashboardOverviewProps = {
@@ -18,7 +15,6 @@ type DashboardOverviewProps = {
  * Renders the shared Dashboard tab content.
  */
 export function DashboardOverview({ projects }: DashboardOverviewProps) {
-  const recentProjects = projects.slice(0, RECENT_PROJECTS_LIMIT);
   const upcomingTasks = DASHBOARD_TEXT.mockTasks.slice(
     0,
     UPCOMING_TASKS_LIMIT,
@@ -37,7 +33,7 @@ export function DashboardOverview({ projects }: DashboardOverviewProps) {
         </div>
 
         <div className="grid gap-8 lg:grid-cols-2">
-          <RecentProjectsCard projects={recentProjects} />
+          <RecentProjectsCard projects={projects} />
           <UpcomingTasksCard tasks={upcomingTasks} />
         </div>
       </div>

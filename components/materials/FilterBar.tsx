@@ -1,15 +1,20 @@
 import { SelectField } from '@/components/ui/select-field';
 import { Input } from '@/components/ui/input';
+import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
+import type { ProjectOption } from '@/lib/dal/projects';
 import { filterBar } from '@/locales/components/materials/filter-bar-locales';
 
 type Props = {
-  projects: string[];
-  projectFilter: string | null;
-  onProjectChange: (value: string | null) => void;
+  projects: ProjectOption[];
+  projectFilter: string;
+  onProjectChange: (value: string) => void;
   searchTerm: string;
   onSearchChange: (value: string) => void;
 };
 
+/**
+ * Renders the project and search controls for the materials list.
+ */
 export default function FilterBar({
   projects,
   projectFilter,
@@ -22,14 +27,18 @@ export default function FilterBar({
       <div className="w-full sm:w-60">
         <SelectField
           options={[
-            { label: filterBar.allProjects, value: '__all__' },
-            ...projects.map((project) => ({ label: project, value: project })),
+            {
+              label: filterBar.allProjects,
+              value: MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS,
+            },
+            ...projects.map((project) => ({
+              label: project.name,
+              value: project.id,
+            })),
           ]}
-          value={projectFilter ?? '__all__'}
-          onChange={(value) =>
-            onProjectChange(value === '__all__' ? null : value)
-          }
-          placeholder="Filter by Project"
+          value={projectFilter}
+          onChange={onProjectChange}
+          placeholder={filterBar.projectPlaceholder}
         />
       </div>
 

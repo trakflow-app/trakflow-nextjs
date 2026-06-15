@@ -1,8 +1,9 @@
 import Link from 'next/link';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { ArrowLeft, FolderOpen, Tag, Wrench } from 'lucide-react';
 import AppImage from '@/components/ui/app-image';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   TOOLS_MANAGEMENT,
   TOOL_STATUS_VARIANTS,
@@ -17,7 +18,13 @@ import {
 } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
 type ToolDetailViewProps = {
+  imageSection: ReactNode;
   tool: ToolRow;
+};
+
+type ToolDetailImageSectionProps = {
+  imagePath: string | null;
+  toolName: string;
 };
 
 type ToolMetaItemProps = {
@@ -40,7 +47,7 @@ function ToolMetaItem({ icon: Icon, label, value }: ToolMetaItemProps) {
 /**
  * Renders the tool detail page body.
  */
-export function ToolDetailView({ tool }: ToolDetailViewProps) {
+export function ToolDetailView({ imageSection, tool }: ToolDetailViewProps) {
   return (
     <div className="min-h-screen bg-background px-6 py-8">
       <div className="mx-auto max-w-6xl space-y-8">
@@ -90,32 +97,7 @@ export function ToolDetailView({ tool }: ToolDetailViewProps) {
           </div>
         </div>
 
-        <section className="max-w-3xl space-y-3">
-          <h2 className="text-lg font-semibold">
-            {TOOL_DETAILS_TEXT.imageLabel}
-          </h2>
-          {tool.imagePath ? (
-            <AppImage
-              src={tool.imagePath}
-              alt={tool.name}
-              aspectRatio="video"
-              rounded="md"
-              sizes={TOOLS_MANAGEMENT.IMAGE_SIZES.DETAIL}
-              loading="eager"
-              className="bg-muted"
-            />
-          ) : (
-            <div className="flex aspect-video items-center justify-center rounded-lg border bg-muted text-muted-foreground">
-              <div className="flex flex-col items-center gap-2">
-                <Wrench className="h-12 w-12" strokeWidth={1.5} />
-                <span className="text-sm font-medium">
-                  {TOOL_DETAILS_TEXT.noImageLabel}
-                </span>
-              </div>
-            </div>
-          )}
-        </section>
-
+        {imageSection}
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">
             {TOOL_DETAILS_TEXT.notesLabel}
@@ -126,5 +108,60 @@ export function ToolDetailView({ tool }: ToolDetailViewProps) {
         </section>
       </div>
     </div>
+  );
+}
+
+/**
+ * Renders the tool image section once the private image URL is available.
+ */
+export function ToolDetailImageSection({
+  imagePath,
+  toolName,
+}: ToolDetailImageSectionProps) {
+  return (
+    <section className="max-w-3xl space-y-3">
+      <h2 className="text-lg font-semibold">{TOOL_DETAILS_TEXT.imageLabel}</h2>
+      {imagePath ? (
+        <AppImage
+          src={imagePath}
+          alt={toolName}
+          aspectRatio="video"
+          rounded="md"
+          sizes={TOOLS_MANAGEMENT.IMAGE_SIZES.DETAIL}
+          loading="eager"
+          className="bg-muted"
+        />
+      ) : (
+        <ToolDetailImagePlaceholder />
+      )}
+    </section>
+  );
+}
+
+/**
+ * Renders the tool image placeholder used when no catalog image exists.
+ */
+export function ToolDetailImagePlaceholder() {
+  return (
+    <div className="flex aspect-video items-center justify-center rounded-lg border bg-muted text-muted-foreground">
+      <div className="flex flex-col items-center gap-2">
+        <Wrench className="h-12 w-12" strokeWidth={1.5} />
+        <span className="text-sm font-medium">
+          {TOOL_DETAILS_TEXT.noImageLabel}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Placeholder while private image signing resolves.
+ */
+export function ToolDetailImageSkeleton() {
+  return (
+    <section className="max-w-3xl space-y-3">
+      <Skeleton className="h-6 w-32" />
+      <Skeleton className="aspect-video w-full rounded-lg" />
+    </section>
   );
 }

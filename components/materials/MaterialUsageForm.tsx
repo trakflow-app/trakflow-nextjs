@@ -206,11 +206,10 @@ export function MaterialUsageForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={isSubmitting || isOverLimit || !canLogUsage}
+            disabled={isOverLimit || !canLogUsage}
+            isLoading={isSubmitting}
           >
-            {isSubmitting
-              ? materialUsageFormLocales.logging
-              : materialUsageFormLocales.confirmConsumption}
+            {materialUsageFormLocales.confirmConsumption}
           </Button>
         </div>
       </form>

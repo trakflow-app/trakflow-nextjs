@@ -76,3 +76,34 @@ export async function createSignedToolImageUrl(
 
   return data.signedUrl;
 }
+
+/**
+ * Resolves private tool image paths to signed display URLs in one storage call.
+ */
+export async function createSignedToolImageUrls(
+  supabase: SupabaseClient<Database>,
+  imagePaths: string[],
+): Promise<Map<string, string>> {
+  if (imagePaths.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase.storage
+    .from(TOOLS_MANAGEMENT.STORAGE.TOOL_IMAGES_BUCKET)
+    .createSignedUrls(
+      imagePaths,
+      TOOLS_MANAGEMENT.STORAGE.SIGNED_URL_EXPIRES_IN_SECONDS,
+    );
+
+  if (error || !data) {
+    return new Map();
+  }
+
+  return new Map(
+    data.flatMap((signedImage, index) => {
+      const imagePath = signedImage.path ?? imagePaths[index];
+
+      return signedImage.signedUrl ? [[imagePath, signedImage.signedUrl]] : [];
+    }),
+  );
+}

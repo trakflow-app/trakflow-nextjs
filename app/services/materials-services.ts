@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import { requireOrgMember } from '@/lib/dal/auth';
 import { createClient } from '@/lib/supabase/server';
 import { type MaterialUI } from '@/lib/types/materials-types';
 import { type Database } from '@/lib/types/database.types';
@@ -8,12 +9,10 @@ import { materialsTable } from '@/locales/components/materials/materials-table-l
 
 const MATERIAL_SERVICE_ERRORS = {
   missingServerConfig: 'Missing Supabase server configuration',
-  notAuthenticated: 'You must be signed in to manage materials',
-  accountNotFound: 'Account details could not be loaded',
   permissionDenied: 'You do not have permission to manage materials',
 };
 
-const MATERIAL_MANAGER_ROLES = ['OWNER', 'FOREMAN'];
+const MATERIAL_MANAGER_ROLES = ['OWNER', 'FOREMAN'] as const;
 
 /**
  * Creates a Supabase admin client for server-side material writes.
@@ -32,6 +31,25 @@ function createAdminClient() {
       persistSession: false,
     },
   });
+}
+
+/**
+ * Ensures the current org member can mutate materials for the requested org.
+ */
+async function requireMaterialManager(orgId?: string | null) {
+  const { account } = await requireOrgMember();
+  const resolvedOrgId = orgId ?? account.org_id;
+  const canManageMaterials =
+    account.org_id === resolvedOrgId &&
+    MATERIAL_MANAGER_ROLES.includes(
+      account.role as (typeof MATERIAL_MANAGER_ROLES)[number],
+    );
+
+  if (!canManageMaterials || !resolvedOrgId) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
+  }
+
+  return resolvedOrgId;
 }
 
 /**
@@ -68,41 +86,13 @@ export async function createMaterialAction(params: {
   unitCost: number;
   lowStockThreshold: number;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.notAuthenticated);
-  }
-
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .select('org_id, role')
-    .eq('id', user.id)
-    .single();
-
-  if (accountError || !account?.org_id || !account?.role) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
-  }
-
-  const canManageMaterials =
-    account.org_id === params.orgId &&
-    MATERIAL_MANAGER_ROLES.includes(account.role);
-
-  if (!canManageMaterials) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
-  }
-
+  const orgId = await requireMaterialManager(params.orgId);
   const adminSupabase = createAdminClient();
 
   const { data, error } = await adminSupabase
     .from('materials')
     .insert({
-      org_id: params.orgId,
+      org_id: orgId,
       name: params.name,
       project_id: params.projectId || null,
       unit_qty: params.quantity,
@@ -142,35 +132,7 @@ export async function updateMaterialAction(params: {
     throw new Error('Low stock threshold is required');
   }
 
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.notAuthenticated);
-  }
-
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .select('org_id, role')
-    .eq('id', user.id)
-    .single();
-
-  if (accountError || !account?.org_id || !account?.role) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
-  }
-
-  const orgId = params.orgId ?? account.org_id;
-  const canManageMaterials =
-    account.org_id === orgId && MATERIAL_MANAGER_ROLES.includes(account.role);
-
-  if (!canManageMaterials) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
-  }
-
+  const orgId = await requireMaterialManager(params.orgId);
   const adminSupabase = createAdminClient();
 
   const updateValues: Database['public']['Tables']['materials']['Update'] = {
@@ -205,7 +167,8 @@ export async function updateMaterialAction(params: {
     id: data.id,
     name: data.name,
     projectId: data.project_id,
-    projectName: data.projects?.project_name || materialsTable.orgInventoryLabel,
+    projectName:
+      data.projects?.project_name || materialsTable.orgInventoryLabel,
     quantity: data.unit_qty,
     minQuantity: data.low_stock_threshold,
     unitCost: data.unit_cost,

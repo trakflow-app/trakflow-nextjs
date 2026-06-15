@@ -11,11 +11,12 @@ import { OWNER_INVITE_PAGE_MESSAGES } from '@/locales/app/(dashboard)/owner/invi
  */
 export default async function OwnerInvitePage() {
   // requireRole handles auth check, role check, and redirect — no repetition needed
-  await requireRole('OWNER');
+  const { account } = await requireRole('OWNER');
+  const orgId = account.org_id as string;
 
   const [joinCode, pendingForemanInvites] = await Promise.all([
-    getOrgJoinCode(),
-    listPendingForemanInvites(),
+    getOrgJoinCode(orgId),
+    listPendingForemanInvites(orgId),
   ]);
   const appUrl = getAppUrl();
 

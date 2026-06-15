@@ -2,8 +2,9 @@ import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
 import type { MaterialUI } from '@/lib/types/materials-types';
-import { Database } from '@/lib/types/database.types';
+import type { Database } from '@/lib/types/database.types';
 import { materialsTable } from '@/locales/components/materials/materials-table-locales';
+import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
 
 const MATERIALS_SELECT_COLUMNS = `
   id,
@@ -17,11 +18,44 @@ const MATERIALS_SELECT_COLUMNS = `
   )
 `;
 
-// Define the exact shape Supabase returns from the JOIN
+/**
+ * Material row shape returned by Supabase when joining project names.
+ */
 type MaterialWithProject = Database['public']['Tables']['materials']['Row'] & {
   projects: { project_name: string } | null;
 };
 
+/**
+ * Server-side filters supported by the materials list query.
+ */
+export type MaterialListFilters = {
+  page: number;
+  pageSize: number;
+  project: string;
+  search: string;
+};
+
+/**
+ * Paginated material rows returned to the materials page.
+ */
+export type MaterialListResult = {
+  materials: MaterialUI[];
+  totalCount: number;
+  totalPages: number;
+};
+
+/**
+ * Summary numbers displayed above the materials table.
+ */
+export type MaterialStats = {
+  inventoryValue: number;
+  lowStockCount: number;
+  totalMaterials: number;
+};
+
+/**
+ * Maps a database material row into the UI shape used by table and modals.
+ */
 function mapMaterialRow(material: MaterialWithProject): MaterialUI {
   return {
     id: material.id,
@@ -37,30 +71,71 @@ function mapMaterialRow(material: MaterialWithProject): MaterialUI {
 }
 
 /**
- * Fetches materials for a specific organization using the server session.
- * Uses the foreign key to 'projects' to get the project_name.
+ * Fetches a paginated materials page for an organization.
  */
-export async function getServerMaterials(
+export async function getServerMaterialsPage(
   orgId: string,
-  projectId?: string | null,
-): Promise<MaterialUI[]> {
+  filters: MaterialListFilters,
+): Promise<MaterialListResult> {
   const supabase = await createClient();
-
+  const pageStartIndex = (filters.page - 1) * filters.pageSize;
+  const pageEndIndex = pageStartIndex + filters.pageSize - 1;
   let query = supabase
     .from('materials')
-    .select(MATERIALS_SELECT_COLUMNS)
-    .eq('org_id', orgId)
-    .order('created_at', { ascending: false });
+    .select(MATERIALS_SELECT_COLUMNS, { count: 'exact' })
+    .eq('org_id', orgId);
 
-  if (projectId) {
-    query = query.eq('project_id', projectId);
+  if (filters.project !== MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS) {
+    query = query.eq('project_id', filters.project);
   }
 
-  const { data, error } = await query;
+  if (filters.search) {
+    query = query.ilike('name', `%${filters.search}%`);
+  }
+
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range(pageStartIndex, pageEndIndex);
 
   if (error) throw error;
 
   const materialsData = data as unknown as MaterialWithProject[];
+  const totalCount = count ?? 0;
 
-  return (materialsData || []).map(mapMaterialRow);
+  return {
+    materials: (materialsData || []).map(mapMaterialRow),
+    totalCount,
+    totalPages: Math.max(1, Math.ceil(totalCount / filters.pageSize)),
+  };
+}
+
+/**
+ * Fetches material summary metrics without loading every row into the UI.
+ */
+export async function getServerMaterialStats(
+  orgId: string,
+): Promise<MaterialStats> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('materials')
+    .select('unit_qty, unit_cost, low_stock_threshold')
+    .eq('org_id', orgId);
+
+  if (error) throw error;
+
+  return (data ?? []).reduce<MaterialStats>(
+    (stats, material) => ({
+      inventoryValue:
+        stats.inventoryValue + material.unit_qty * material.unit_cost,
+      lowStockCount:
+        stats.lowStockCount +
+        (material.unit_qty <= material.low_stock_threshold ? 1 : 0),
+      totalMaterials: stats.totalMaterials + 1,
+    }),
+    {
+      inventoryValue: 0,
+      lowStockCount: 0,
+      totalMaterials: 0,
+    },
+  );
 }

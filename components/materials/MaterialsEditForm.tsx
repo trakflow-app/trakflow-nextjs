@@ -143,10 +143,8 @@ export function MaterialEditForm({
         </div>
 
         <div className="flex justify-end pt-4">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting
-              ? materialEditFormLocales.updatingButton
-              : materialEditFormLocales.updateButton}
+          <Button type="submit" className="w-full" isLoading={isSubmitting}>
+            {materialEditFormLocales.updateButton}
           </Button>
         </div>
       </form>

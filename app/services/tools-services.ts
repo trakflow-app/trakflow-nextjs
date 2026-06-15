@@ -29,11 +29,10 @@ export type ToolActionState = {
 } | null;
 
 /**
- * Shared form values for create/edit tool actions, with parsing/validation logic
+ * Shared form values for create/edit tool actions.
  */
 type ToolFormValues = {
   name: string;
-  tagNumber: number;
   status: ToolStatus;
   condition: ToolCondition;
   projectId: string | null;
@@ -125,10 +124,6 @@ function getImageValidationError(file: File | null): string | null {
  */
 function getToolFormValues(formData: FormData): ToolFormValues | null {
   const name = getRequiredFormString(formData, TOOLS_MANAGEMENT.FORM_KEYS.name);
-  const tagNumberValue = getRequiredFormString(
-    formData,
-    TOOLS_MANAGEMENT.FORM_KEYS.tagNumber,
-  );
   const status = getRequiredFormString(
     formData,
     TOOLS_MANAGEMENT.FORM_KEYS.status,
@@ -143,12 +138,9 @@ function getToolFormValues(formData: FormData): ToolFormValues | null {
   );
   const notesValue = formData.get(TOOLS_MANAGEMENT.FORM_KEYS.notes);
   const imageFile = getOptionalImageFile(formData);
-  const tagNumber = tagNumberValue ? Number(tagNumberValue) : Number.NaN;
 
   if (
     !name ||
-    !Number.isInteger(tagNumber) ||
-    tagNumber < TOOLS_MANAGEMENT.LIMITS.MIN_TAG_NUMBER ||
     !status ||
     !isToolStatus(status) ||
     !isManualToolStatus(status) ||
@@ -160,7 +152,6 @@ function getToolFormValues(formData: FormData): ToolFormValues | null {
 
   return {
     name,
-    tagNumber,
     status,
     condition,
     projectId:
@@ -201,17 +192,18 @@ export async function createToolAction(
   }
 
   const supabase = await createClient();
+  const toolInsert = {
+    org_id: account.org_id as string,
+    name: values.name,
+    // The database trigger assigns tag_number from the org counter.
+    status: values.status,
+    condition: values.condition,
+    project_id: values.projectId,
+    notes: values.notes,
+  } as Database['public']['Tables']['tools']['Insert'];
   const { data: tool, error } = await supabase
     .from('tools')
-    .insert({
-      org_id: account.org_id as string,
-      name: values.name,
-      tag_number: values.tagNumber,
-      status: values.status,
-      condition: values.condition,
-      project_id: values.projectId,
-      notes: values.notes,
-    })
+    .insert(toolInsert)
     .select('id')
     .single();
 
@@ -225,6 +217,7 @@ export async function createToolAction(
     try {
       imagePath = await uploadToolCatalogImage(supabase, values.imageFile);
     } catch {
+      // Roll back the row because the tool should not exist without its image.
       await supabase
         .from('tools')
         .delete()
@@ -241,6 +234,7 @@ export async function createToolAction(
       .eq('org_id', account.org_id as string);
 
     if (imagePathError) {
+      // Keep storage and database in sync if the row cannot store the image path.
       await removeToolCatalogImage(supabase, imagePath);
       await supabase
         .from('tools')
@@ -293,11 +287,11 @@ export async function updateToolAction(
     }
   }
 
+  // Only replace the image path after the new upload succeeds.
   const { error } = await supabase
     .from('tools')
     .update({
       name: values.name,
-      tag_number: values.tagNumber,
       status: values.status,
       condition: values.condition,
       project_id: values.projectId,
@@ -338,11 +332,16 @@ export async function deleteToolAction(
   const supabase = await createClient();
   const { data: existingTool } = await supabase
     .from('tools')
-    .select('image_path')
+    .select('image_path, status')
     .eq('id', id)
     .eq('org_id', account.org_id as string)
     .single();
 
+  if (existingTool?.status === 'CHECKEDOUT') {
+    return { error: TOOLS_ACTION_TEXT.deleteCheckedOut };
+  }
+
+  // Remove the image before deleting the row so orphaned storage files do not grow.
   await removeToolCatalogImage(supabase, existingTool?.image_path ?? null);
 
   const { error } = await supabase

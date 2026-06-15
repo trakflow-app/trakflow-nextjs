@@ -14,8 +14,9 @@ import { DASHBOARD_TEXT } from '@/locales/components/dashboard/dashboard-locales
  * Crew management tab for foreman and owner users.
  */
 export default async function CrewManagementPage() {
+  // Make sure only foremen and owners can access this page, and fetch the org join code for display.
   const { account } = await requireAnyRole(['FOREMAN', 'OWNER']);
-  const joinCode = await getOrgJoinCode();
+  const joinCode = await getOrgJoinCode(account.org_id as string);
   const isOwner = account.role === 'OWNER';
 
   return (

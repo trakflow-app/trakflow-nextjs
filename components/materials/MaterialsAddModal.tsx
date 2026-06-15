@@ -86,6 +86,16 @@ export function MaterialsAddModal({
     })),
   ];
 
+  function handleOpenChange(open: boolean) {
+    if (!open && isSubmitting) {
+      return;
+    }
+
+    if (!open) {
+      onClose();
+    }
+  }
+
   const handleInputChange = (
     field: keyof AddMaterialFormData,
     value: string | number | null,
@@ -136,7 +146,7 @@ export function MaterialsAddModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{materialsAddModalLocales.title}</DialogTitle>
@@ -241,10 +251,8 @@ export function MaterialsAddModal({
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? materialsAddModalLocales.submittingButton
-                  : materialsAddModalLocales.submitButton}
+              <Button type="submit" isLoading={isSubmitting}>
+                {materialsAddModalLocales.submitButton}
               </Button>
             </div>
           </form>

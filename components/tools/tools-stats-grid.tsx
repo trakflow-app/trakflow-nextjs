@@ -1,30 +1,16 @@
 import { CheckCircle2, ClipboardList, Wrench } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ToolRow } from '@/lib/dal/tools';
+import type { ToolStats } from '@/lib/dal/tools';
 import { TOOLS_STATS_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
 type ToolsStatsGridProps = {
-  tools: ToolRow[];
+  stats: ToolStats;
 };
 
 /**
  * Displays summary metrics for the tools inventory.
  */
-export function ToolsStatsGrid({ tools }: ToolsStatsGridProps) {
-  const totalTools = tools.length;
-  const availableTools = tools.filter(
-    (tool) => tool.status === 'AVAILABLE',
-  ).length;
-  const checkedOutTools = tools.filter(
-    (tool) => tool.status === 'CHECKEDOUT',
-  ).length;
-  const serviceTools = tools.filter(
-    (tool) =>
-      tool.status === 'OUT_OF_SERVICE' ||
-      tool.condition === 'DAMAGED' ||
-      tool.condition === 'OUT_OF_SERVICE',
-  ).length;
-
+export function ToolsStatsGrid({ stats }: ToolsStatsGridProps) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
@@ -35,7 +21,7 @@ export function ToolsStatsGrid({ tools }: ToolsStatsGridProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-semibold">{totalTools}</div>
+          <div className="text-2xl font-semibold">{stats.totalTools}</div>
         </CardContent>
       </Card>
 
@@ -47,7 +33,7 @@ export function ToolsStatsGrid({ tools }: ToolsStatsGridProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-semibold">{availableTools}</div>
+          <div className="text-2xl font-semibold">{stats.availableTools}</div>
         </CardContent>
       </Card>
 
@@ -59,7 +45,7 @@ export function ToolsStatsGrid({ tools }: ToolsStatsGridProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-semibold">{checkedOutTools}</div>
+          <div className="text-2xl font-semibold">{stats.checkedOutTools}</div>
         </CardContent>
       </Card>
 
@@ -71,7 +57,7 @@ export function ToolsStatsGrid({ tools }: ToolsStatsGridProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-semibold">{serviceTools}</div>
+          <div className="text-2xl font-semibold">{stats.serviceTools}</div>
         </CardContent>
       </Card>
     </div>

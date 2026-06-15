@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Table,
   TableHeader,
@@ -16,8 +16,6 @@ import { materialsTable } from '@/locales/components/materials/materials-table-l
 
 type Props = {
   materials: MaterialUI[];
-  projectFilter: string | null;
-  searchTerm: string;
   onLogUsage: (id: string) => void;
   onEdit: (id: string) => void;
 };
@@ -28,45 +26,18 @@ type Props = {
 const getStatusLabel = (isLow: boolean) =>
   isLow ? materialsTable.lowStock : materialsTable.inStock;
 
+/**
+ * This component is showing a list of materials in a table format for desktop, and a card format for mobile. It accepts a list of materials and two callbacks for logging usage and editing materials. The status of each material is determined by comparing the current quantity to the minimum quantity, and appropriate styling and labels are applied.
+ */
 export default function MaterialsTable({
   materials,
-  projectFilter,
-  searchTerm,
   onLogUsage,
   onEdit,
 }: Props) {
-  /**
-   * Filter Logic: useMemo for large arrays
-   * First, we narrow down the materials based on the active project
-   * and the user's search query across name and project name.
-   */
-  const rows = useMemo(() => {
-    return materials.filter((material) => {
-      // If a project is selected, exclude materials that don't match
-      if (projectFilter && material.projectName !== projectFilter) return false;
+  const rows = materials;
 
-      // If search term exists, check for matches in material name or project name
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase();
-        return (
-          material.name.toLowerCase().includes(q) ||
-          material.projectName.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [materials, projectFilter, searchTerm]);
-
-  /**
-   * Row Transformation:
-   * Calculates derived values like total cost and inventory status.
-   * This is called inside your map() when rendering the table rows.
-   */
   const computeMaterialRow = (material: MaterialUI) => {
-    // Business Logic: Value calculation
     const totalValue = material.unitCost * material.quantity;
-
-    // Threshold Check: Determine if the item is running low
     const isLow = material.quantity <= material.minQuantity;
     const statusLabel = getStatusLabel(isLow);
 
@@ -75,7 +46,6 @@ export default function MaterialsTable({
 
   return (
     <div className="w-full">
-      {/* MOBILE VIEW: Hidden on large screens (md:hidden) */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {rows.map((material) => {
           const { totalValue, isLow, statusLabel } =
@@ -156,7 +126,6 @@ export default function MaterialsTable({
         })}
       </div>
 
-      {/* DESKTOP VIEW */}
       <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <Table className="min-w-full">
           <TableHeader className="bg-slate-50/50">
@@ -232,7 +201,6 @@ export default function MaterialsTable({
                           : 'border-success/10 bg-success/10 text-success'
                       }
                     >
-                      {/* Conditional Icon Rendering */}
                       {isLow ? (
                         <AlertTriangle className="w-3 h-3" />
                       ) : (

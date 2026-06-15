@@ -2,39 +2,53 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import StatsGrid from '@/components/materials/StatsGrid';
 import FilterBar from '@/components/materials/FilterBar';
 import MaterialsTable from '@/components/materials/MaterialsTable';
 import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';
 import { MaterialEditModal } from '@/components/materials/MaterialsEditModal';
 import { MaterialsAddModal } from '@/components/materials/MaterialsAddModal';
+import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
 import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
 import type { ProjectOption } from '@/lib/dal/projects';
+import type { MaterialListFilters, MaterialStats } from '@/lib/dal/materials';
 import type {
   MaterialUI,
   MaterialUsageSubmitData,
 } from '@/lib/types/materials-types';
 
 type MaterialsClientProps = {
+  filters: MaterialListFilters;
   initialMaterials: MaterialUI[];
+  materialStats: MaterialStats;
   orgProjects: ProjectOption[];
   orgId: string;
+  totalPages: number;
 };
+
+/**
+ * Optimistic row updates keyed by material id.
+ */
+type MaterialOverrides = Record<string, MaterialUI>;
 
 /**
  * Client-side materials workspace for filters, modals, and optimistic updates.
  */
 export function MaterialsClient({
+  filters,
   initialMaterials,
+  materialStats,
   orgProjects,
   orgId,
+  totalPages,
 }: MaterialsClientProps) {
   const router = useRouter();
-  const [projectFilter, setProjectFilter] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [materials, setMaterials] = useState<MaterialUI[]>(initialMaterials);
+  const [materialOverrides, setMaterialOverrides] = useState<MaterialOverrides>(
+    {},
+  );
 
   const [usageModalOpen, setUsageModalOpen] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(
@@ -46,9 +60,24 @@ export function MaterialsClient({
     string | null
   >(null);
 
-  const projects = useMemo(
-    () => orgProjects.map((project) => project.name),
-    [orgProjects],
+  const pageSizeOptions = useMemo<SelectOption[]>(
+    () =>
+      Object.values(MATERIALS_MANAGEMENT.PAGE_SIZES).map((pageSize) => ({
+        label: String(pageSize),
+        value: String(pageSize),
+      })),
+    [],
+  );
+
+  /**
+   * Applies local edits and usage changes over the current server page.
+   */
+  const materials = useMemo(
+    () =>
+      initialMaterials.map(
+        (material) => materialOverrides[material.id] ?? material,
+      ),
+    [initialMaterials, materialOverrides],
   );
 
   const selectedEditMaterial = useMemo(
@@ -58,6 +87,80 @@ export function MaterialsClient({
         : null,
     [materials, selectedEditMaterialId],
   );
+
+  const normalizedCurrentPage = Math.min(filters.page, totalPages);
+  const pageSummary = materialsPage.pagination.summary
+    .replace(
+      MATERIALS_MANAGEMENT.PAGE_SUMMARY_TOKENS.CURRENT_PAGE,
+      String(normalizedCurrentPage),
+    )
+    .replace(
+      MATERIALS_MANAGEMENT.PAGE_SUMMARY_TOKENS.TOTAL_PAGES,
+      String(totalPages),
+    );
+
+  /**
+   * Updates URL search params so the server returns the matching materials page.
+   */
+  function updateMaterialQueryParams(nextParams: Partial<MaterialListFilters>) {
+    const params = new URLSearchParams();
+    const mergedFilters = {
+      ...filters,
+      ...nextParams,
+    };
+
+    if (mergedFilters.search) {
+      params.set(
+        MATERIALS_MANAGEMENT.QUERY_PARAMS.search,
+        mergedFilters.search,
+      );
+    }
+
+    if (mergedFilters.project !== MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS) {
+      params.set(
+        MATERIALS_MANAGEMENT.QUERY_PARAMS.project,
+        mergedFilters.project,
+      );
+    }
+
+    if (mergedFilters.page !== MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE) {
+      params.set(
+        MATERIALS_MANAGEMENT.QUERY_PARAMS.page,
+        String(mergedFilters.page),
+      );
+    }
+
+    if (mergedFilters.pageSize !== MATERIALS_MANAGEMENT.DEFAULTS.PAGE_SIZE) {
+      params.set(
+        MATERIALS_MANAGEMENT.QUERY_PARAMS.pageSize,
+        String(mergedFilters.pageSize),
+      );
+    }
+
+    const queryString = params.toString();
+    router.push(queryString ? `/materials?${queryString}` : '/materials');
+  }
+
+  function handleProjectFilterChange(value: string) {
+    updateMaterialQueryParams({
+      page: MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+      project: value,
+    });
+  }
+
+  function handleSearchChange(value: string) {
+    updateMaterialQueryParams({
+      page: MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+      search: value,
+    });
+  }
+
+  function handlePageSizeChange(value: string) {
+    updateMaterialQueryParams({
+      page: MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+      pageSize: Number(value),
+    });
+  }
 
   function handleLogUsage(id: string) {
     setSelectedMaterialId(id);
@@ -72,22 +175,26 @@ export function MaterialsClient({
   function handleUsageSubmitSuccess(data: MaterialUsageSubmitData) {
     if (!selectedMaterialId) return;
 
-    setMaterials((prevMaterials) =>
-      prevMaterials.map((material) => {
-        if (material.id !== data.materialId) return material;
-
-        const newQuantity = Math.max(
-          0,
-          material.quantity - data.quantityUsed,
-        );
-
-        return {
-          ...material,
-          quantity: newQuantity,
-          totalValue: newQuantity * material.unitCost,
-        };
-      }),
+    // Usage can only update a material that exists on the current server page.
+    const currentMaterial = materials.find(
+      (material) => material.id === data.materialId,
     );
+
+    if (!currentMaterial) return;
+
+    const newQuantity = Math.max(
+      0,
+      currentMaterial.quantity - data.quantityUsed,
+    );
+
+    setMaterialOverrides((currentOverrides) => ({
+      ...currentOverrides,
+      [data.materialId]: {
+        ...currentMaterial,
+        quantity: newQuantity,
+        totalValue: newQuantity * currentMaterial.unitCost,
+      },
+    }));
   }
 
   function handleEdit(id: string) {
@@ -101,11 +208,11 @@ export function MaterialsClient({
   }
 
   function handleEditSubmitSuccess(updatedMaterial: MaterialUI) {
-    setMaterials((prevMaterials) =>
-      prevMaterials.map((material) =>
-        material.id === updatedMaterial.id ? updatedMaterial : material,
-      ),
-    );
+    // Keep the edited row visible immediately while the server refresh catches up.
+    setMaterialOverrides((currentOverrides) => ({
+      ...currentOverrides,
+      [updatedMaterial.id]: updatedMaterial,
+    }));
   }
 
   function handleAddMaterialSuccess() {
@@ -131,25 +238,75 @@ export function MaterialsClient({
       </div>
 
       <div className="flex flex-col gap-6">
-        <StatsGrid materials={materials} />
+        <StatsGrid stats={materialStats} />
 
         <div className="flex items-center justify-between">
           <FilterBar
-            projects={projects}
-            projectFilter={projectFilter}
-            onProjectChange={setProjectFilter}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
+            projects={orgProjects}
+            projectFilter={filters.project}
+            onProjectChange={handleProjectFilterChange}
+            searchTerm={filters.search}
+            onSearchChange={handleSearchChange}
           />
         </div>
 
         <MaterialsTable
           materials={materials}
-          projectFilter={projectFilter}
-          searchTerm={searchTerm}
           onLogUsage={handleLogUsage}
           onEdit={handleEdit}
         />
+
+        <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {materialsPage.pagination.pageSizeLabel}
+            </span>
+            <SelectField
+              options={pageSizeOptions}
+              value={String(filters.pageSize)}
+              onChange={handlePageSizeChange}
+              placeholder={materialsPage.pagination.pageSizeLabel}
+              className="w-20"
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <span className="text-sm text-muted-foreground">{pageSummary}</span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={
+                  normalizedCurrentPage ===
+                  MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE
+                }
+                onClick={() =>
+                  updateMaterialQueryParams({
+                    page: Math.max(
+                      MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+                      normalizedCurrentPage - 1,
+                    ),
+                  })
+                }
+              >
+                <ChevronLeft data-icon="inline-start" />
+                {materialsPage.pagination.previousButton}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={normalizedCurrentPage === totalPages}
+                onClick={() =>
+                  updateMaterialQueryParams({
+                    page: Math.min(totalPages, normalizedCurrentPage + 1),
+                  })
+                }
+              >
+                {materialsPage.pagination.nextButton}
+                <ChevronRight data-icon="inline-end" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <MaterialUsageModal

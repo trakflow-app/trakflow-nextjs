@@ -1,8 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 
 const ORGS_ERROR_MESSAGES = {
-  authenticationRequired: 'Authentication required.',
-  failedToLoadAccount: 'Failed to load account.',
   failedToLoadOrganization: 'Failed to load organization.',
 } as const;
 
@@ -15,43 +13,20 @@ function createOrgsError(message: string): Error {
 }
 
 /**
- * Reads the join code for the authenticated user's organization.
- * Returns null only when the user has no org yet (valid unboarded state).
- * Throws for unauthenticated callers or actual database failures.
+ * Reads the join code for the provided organization.
  */
-export async function getOrgJoinCode(): Promise<string | null> {
+export async function getOrgJoinCode(orgId: string): Promise<string | null> {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw createOrgsError(ORGS_ERROR_MESSAGES.authenticationRequired);
-  }
-
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .select('org_id')
-    .eq('id', user.id)
-    .single();
-
-  if (accountError) {
-    throw createOrgsError(ORGS_ERROR_MESSAGES.failedToLoadAccount);
-  }
-
-  if (!account?.org_id) return null;
 
   const { data: org, error: orgError } = await supabase
     .from('organizations')
     .select('join_code')
-    .eq('id', account.org_id)
+    .eq('id', orgId)
     .single();
 
   if (orgError) {
     console.error('getOrgJoinCode organizations query failed', {
-      userId: user.id,
-      accountOrgId: account.org_id,
+      orgId,
       message: orgError.message,
       details: orgError.details,
       hint: orgError.hint,

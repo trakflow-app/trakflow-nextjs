@@ -1,12 +1,6 @@
 'use client';
 
-import {
-  Building2,
-  Calendar,
-  DollarSign,
-  Edit2,
-  Eye,
-} from 'lucide-react';
+import { Building2, Calendar, DollarSign, Edit2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -97,12 +91,7 @@ export function ProjectCard({
           {PROJECTS_ACTION_TEXT.viewButton}
         </Button>
         {canManageProjects && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-1"
-            onClick={onEdit}
-          >
+          <Button variant="ghost" size="sm" className="flex-1" onClick={onEdit}>
             <Edit2 />
             {PROJECTS_ACTION_TEXT.editButton}
           </Button>
