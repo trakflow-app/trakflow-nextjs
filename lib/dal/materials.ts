@@ -115,27 +115,22 @@ export async function getServerMaterialsPage(
 export async function getServerMaterialStats(
   orgId: string,
 ): Promise<MaterialStats> {
+  // Create an authenticated server client so the view respects material RLS.
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('materials')
-    .select('unit_qty, unit_cost, low_stock_threshold')
-    .eq('org_id', orgId);
 
+  // Read the single aggregate row for the current organization.
+  const { data, error } = await supabase
+    .from('material_inventory_stats')
+    .select('inventory_value, low_stock_count, total_materials')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  // Surface database or permission failures to the page error boundary.
   if (error) throw error;
 
-  return (data ?? []).reduce<MaterialStats>(
-    (stats, material) => ({
-      inventoryValue:
-        stats.inventoryValue + material.unit_qty * material.unit_cost,
-      lowStockCount:
-        stats.lowStockCount +
-        (material.unit_qty <= material.low_stock_threshold ? 1 : 0),
-      totalMaterials: stats.totalMaterials + 1,
-    }),
-    {
-      inventoryValue: 0,
-      lowStockCount: 0,
-      totalMaterials: 0,
-    },
-  );
+  return {
+    inventoryValue: data?.inventory_value ?? 0,
+    lowStockCount: data?.low_stock_count ?? 0,
+    totalMaterials: data?.total_materials ?? 0,
+  };
 }

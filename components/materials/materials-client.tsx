@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import type {
   MaterialUI,
   MaterialUsageSubmitData,
 } from '@/lib/types/materials-types';
+import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 
 type MaterialsClientProps = {
   filters: MaterialListFilters;
@@ -59,7 +60,6 @@ export function MaterialsClient({
   const [selectedEditMaterialId, setSelectedEditMaterialId] = useState<
     string | null
   >(null);
-
   const pageSizeOptions = useMemo<SelectOption[]>(
     () =>
       Object.values(MATERIALS_MANAGEMENT.PAGE_SIZES).map((pageSize) => ({
@@ -102,56 +102,81 @@ export function MaterialsClient({
   /**
    * Updates URL search params so the server returns the matching materials page.
    */
-  function updateMaterialQueryParams(nextParams: Partial<MaterialListFilters>) {
-    const params = new URLSearchParams();
-    const mergedFilters = {
-      ...filters,
-      ...nextParams,
-    };
+  const updateMaterialQueryParams = useCallback(
+    (
+      nextParams: Partial<MaterialListFilters>,
+      navigation: 'push' | 'replace' = 'push',
+    ) => {
+      // Build a complete query from the current filters and requested changes.
+      const params = new URLSearchParams();
+      const mergedFilters = {
+        ...filters,
+        ...nextParams,
+      };
 
-    if (mergedFilters.search) {
-      params.set(
-        MATERIALS_MANAGEMENT.QUERY_PARAMS.search,
-        mergedFilters.search,
-      );
-    }
+      // Include search only when it has a value.
+      if (mergedFilters.search) {
+        params.set(
+          MATERIALS_MANAGEMENT.QUERY_PARAMS.search,
+          mergedFilters.search,
+        );
+      }
 
-    if (mergedFilters.project !== MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS) {
-      params.set(
-        MATERIALS_MANAGEMENT.QUERY_PARAMS.project,
-        mergedFilters.project,
-      );
-    }
+      // Include project only when it differs from the default.
+      if (mergedFilters.project !== MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS) {
+        params.set(
+          MATERIALS_MANAGEMENT.QUERY_PARAMS.project,
+          mergedFilters.project,
+        );
+      }
 
-    if (mergedFilters.page !== MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE) {
-      params.set(
-        MATERIALS_MANAGEMENT.QUERY_PARAMS.page,
-        String(mergedFilters.page),
-      );
-    }
+      // Include page only when it is not the first page.
+      if (mergedFilters.page !== MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE) {
+        params.set(
+          MATERIALS_MANAGEMENT.QUERY_PARAMS.page,
+          String(mergedFilters.page),
+        );
+      }
 
-    if (mergedFilters.pageSize !== MATERIALS_MANAGEMENT.DEFAULTS.PAGE_SIZE) {
-      params.set(
-        MATERIALS_MANAGEMENT.QUERY_PARAMS.pageSize,
-        String(mergedFilters.pageSize),
-      );
-    }
+      // Include page size only when it differs from the default.
+      if (mergedFilters.pageSize !== MATERIALS_MANAGEMENT.DEFAULTS.PAGE_SIZE) {
+        params.set(
+          MATERIALS_MANAGEMENT.QUERY_PARAMS.pageSize,
+          String(mergedFilters.pageSize),
+        );
+      }
 
-    const queryString = params.toString();
-    router.push(queryString ? `/materials?${queryString}` : '/materials');
-  }
+      // Build the destination from the validated query parameters.
+      const queryString = params.toString();
+      const path = queryString
+        ? `${MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH}?${queryString}`
+        : MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH;
+
+      router[navigation](path);
+    },
+    [filters, router],
+  );
+
+  // Keep typing local and update the URL only after the debounce delay.
+  const { inputValue: searchInput, setInputValue: setSearchInput } =
+    useDebouncedSearch({
+      serverValue: filters.search,
+      debounceMs: MATERIALS_MANAGEMENT.SEARCH_DEBOUNCE_MS,
+      onDebouncedChange: (value) => {
+        updateMaterialQueryParams(
+          {
+            page: MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+            search: value,
+          },
+          'replace',
+        );
+      },
+    });
 
   function handleProjectFilterChange(value: string) {
     updateMaterialQueryParams({
       page: MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
       project: value,
-    });
-  }
-
-  function handleSearchChange(value: string) {
-    updateMaterialQueryParams({
-      page: MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
-      search: value,
     });
   }
 
@@ -173,6 +198,7 @@ export function MaterialsClient({
   }
 
   function handleUsageSubmitSuccess(data: MaterialUsageSubmitData) {
+    // Stop when no material is selected.
     if (!selectedMaterialId) return;
 
     // Usage can only update a material that exists on the current server page.
@@ -180,8 +206,10 @@ export function MaterialsClient({
       (material) => material.id === data.materialId,
     );
 
+    // Stop when the updated material is not on the current page.
     if (!currentMaterial) return;
 
+    // Calculate the optimistic quantity shown before the server refresh finishes.
     const newQuantity = Math.max(
       0,
       currentMaterial.quantity - data.quantityUsed,
@@ -195,6 +223,7 @@ export function MaterialsClient({
         totalValue: newQuantity * currentMaterial.unitCost,
       },
     }));
+    router.refresh();
   }
 
   function handleEdit(id: string) {
@@ -213,6 +242,7 @@ export function MaterialsClient({
       ...currentOverrides,
       [updatedMaterial.id]: updatedMaterial,
     }));
+    router.refresh();
   }
 
   function handleAddMaterialSuccess() {
@@ -245,8 +275,8 @@ export function MaterialsClient({
             projects={orgProjects}
             projectFilter={filters.project}
             onProjectChange={handleProjectFilterChange}
-            searchTerm={filters.search}
-            onSearchChange={handleSearchChange}
+            searchTerm={searchInput}
+            onSearchChange={setSearchInput}
           />
         </div>
 

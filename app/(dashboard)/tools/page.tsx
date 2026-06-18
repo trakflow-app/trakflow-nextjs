@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { ToolCreateButton } from '@/components/tools/tool-create-button';
 import { ToolsList } from '@/components/tools/tools-list';
 import { ToolsStatsGrid } from '@/components/tools/tools-stats-grid';
@@ -13,6 +14,11 @@ import {
   type ToolListFilters,
 } from '@/lib/dal/tools';
 import type { Database } from '@/lib/types/database.types';
+import {
+  getAllowedNumber,
+  getPositiveInteger,
+  getSearchParamValue,
+} from '@/lib/query-params';
 import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
 /**
@@ -40,37 +46,17 @@ function canManageTools(role: Database['public']['Enums']['user_role'] | null) {
 }
 
 /**
- * Reads a single query string value from Next's search params shape.
- */
-function getSearchParamValue(
-  searchParams: Record<string, string | string[] | undefined>,
-  key: string,
-): string | undefined {
-  const value = searchParams[key];
-
-  return Array.isArray(value) ? value[0] : value;
-}
-
-/**
- * Parses positive numeric query params while preserving a safe fallback.
- */
-function getPositiveInteger(value: string | undefined, fallback: number) {
-  const numericValue = Number(value);
-
-  return Number.isInteger(numericValue) && numericValue > 0
-    ? numericValue
-    : fallback;
-}
-
-/**
  * Converts URL search params into the DAL filter contract.
  */
 function getToolFilters(
   searchParams: Record<string, string | string[] | undefined>,
 ): ToolListFilters {
+  // Validate the requested tool status against known filter values below.
   const status =
     getSearchParamValue(searchParams, TOOLS_MANAGEMENT.QUERY_PARAMS.status) ??
     TOOLS_MANAGEMENT.FILTERS.ALL;
+
+  // Validate the derived assignment type against known filter values below.
   const type =
     getSearchParamValue(searchParams, TOOLS_MANAGEMENT.QUERY_PARAMS.type) ??
     TOOLS_MANAGEMENT.FILTERS.ALL;
@@ -80,8 +66,9 @@ function getToolFilters(
       getSearchParamValue(searchParams, TOOLS_MANAGEMENT.QUERY_PARAMS.page),
       TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
     ),
-    pageSize: getPositiveInteger(
+    pageSize: getAllowedNumber(
       getSearchParamValue(searchParams, TOOLS_MANAGEMENT.QUERY_PARAMS.pageSize),
+      Object.values(TOOLS_MANAGEMENT.PAGE_SIZES),
       TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE,
     ),
     project:
@@ -105,19 +92,82 @@ function getToolFilters(
 }
 
 /**
+ * Builds a canonical tools list URL from validated filters.
+ */
+function getToolsListPath(filters: ToolListFilters): string {
+  // Start with an empty query and add only non-default filters.
+  const params = new URLSearchParams();
+
+  // Preserve the current search text.
+  if (filters.search) {
+    params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.search, filters.search);
+  }
+
+  // Preserve a non-default status filter.
+  if (filters.status !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+    params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.status, filters.status);
+  }
+
+  // Preserve a non-default assignment type.
+  if (filters.type !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+    params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.type, filters.type);
+  }
+
+  // Preserve a non-default project filter.
+  if (filters.project !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+    params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.project, filters.project);
+  }
+
+  // Omit page one to keep the canonical URL short.
+  if (filters.page !== TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE) {
+    params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.page, String(filters.page));
+  }
+
+  // Omit the default page size to keep the canonical URL short.
+  if (filters.pageSize !== TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE) {
+    params.set(
+      TOOLS_MANAGEMENT.QUERY_PARAMS.pageSize,
+      String(filters.pageSize),
+    );
+  }
+
+  // Convert the validated filters into the final URL.
+  const queryString = params.toString();
+
+  return queryString
+    ? `${TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH}?${queryString}`
+    : TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH;
+}
+
+/**
  * Tools page that fetches organization tools and renders inventory summaries.
  */
 export default async function ToolsPage({ searchParams }: ToolsPageProps) {
+  // Resolve and validate the incoming URL filters.
   const resolvedSearchParams = await searchParams;
+
+  // Load the authenticated organization before querying inventory.
   const { account } = await requireOrgMember();
   const orgId = account.org_id as string;
   const canManageToolRecords = canManageTools(account.role);
   const filters = getToolFilters(resolvedSearchParams);
+
+  // Load list rows, filter options, and summary cards in parallel.
   const [toolsResult, projects, stats] = await Promise.all([
     getTools(orgId, filters),
     getToolProjects(orgId),
     getToolStats(orgId),
   ]);
+
+  // Redirect invalid high page numbers to the final available page.
+  if (filters.page > toolsResult.totalPages) {
+    redirect(
+      getToolsListPath({
+        ...filters,
+        page: toolsResult.totalPages,
+      }),
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background px-6 py-8">

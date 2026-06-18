@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -78,6 +78,7 @@ import {
   TOOL_STATUS_LABELS,
 } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 import type { Database } from '@/lib/types/database.types';
+import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 
 type ToolCondition = Database['public']['Enums']['tool_condition'];
 type ToolStatus = Database['public']['Enums']['tool_status'];
@@ -170,53 +171,83 @@ export function ToolsList({
   /**
    * Updates URL search params so the server returns the matching tool page.
    */
-  function updateToolQueryParams(nextParams: Partial<ToolListFilters>) {
-    const params = new URLSearchParams();
-    const mergedFilters = {
-      ...filters,
-      ...nextParams,
-    };
+  const updateToolQueryParams = useCallback(
+    (
+      nextParams: Partial<ToolListFilters>,
+      navigation: 'push' | 'replace' = 'push',
+    ) => {
+      // Build a complete query from the current filters and requested changes.
+      const params = new URLSearchParams();
+      const mergedFilters = {
+        ...filters,
+        ...nextParams,
+      };
 
-    if (mergedFilters.search) {
-      params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.search, mergedFilters.search);
-    }
+      // Include search only when it has a value.
+      if (mergedFilters.search) {
+        params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.search, mergedFilters.search);
+      }
 
-    if (mergedFilters.status !== TOOLS_MANAGEMENT.FILTERS.ALL) {
-      params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.status, mergedFilters.status);
-    }
+      // Include status only when it differs from the default.
+      if (mergedFilters.status !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+        params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.status, mergedFilters.status);
+      }
 
-    if (mergedFilters.type !== TOOLS_MANAGEMENT.FILTERS.ALL) {
-      params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.type, mergedFilters.type);
-    }
+      // Include assignment type only when it differs from the default.
+      if (mergedFilters.type !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+        params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.type, mergedFilters.type);
+      }
 
-    if (mergedFilters.project !== TOOLS_MANAGEMENT.FILTERS.ALL) {
-      params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.project, mergedFilters.project);
-    }
+      // Include project only when it differs from the default.
+      if (mergedFilters.project !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+        params.set(
+          TOOLS_MANAGEMENT.QUERY_PARAMS.project,
+          mergedFilters.project,
+        );
+      }
 
-    if (mergedFilters.page !== TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE) {
-      params.set(
-        TOOLS_MANAGEMENT.QUERY_PARAMS.page,
-        String(mergedFilters.page),
-      );
-    }
+      // Include page only when it is not the first page.
+      if (mergedFilters.page !== TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE) {
+        params.set(
+          TOOLS_MANAGEMENT.QUERY_PARAMS.page,
+          String(mergedFilters.page),
+        );
+      }
 
-    if (mergedFilters.pageSize !== TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE) {
-      params.set(
-        TOOLS_MANAGEMENT.QUERY_PARAMS.pageSize,
-        String(mergedFilters.pageSize),
-      );
-    }
+      // Include page size only when it differs from the default.
+      if (mergedFilters.pageSize !== TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE) {
+        params.set(
+          TOOLS_MANAGEMENT.QUERY_PARAMS.pageSize,
+          String(mergedFilters.pageSize),
+        );
+      }
 
-    const queryString = params.toString();
-    router.push(queryString ? `/tools?${queryString}` : '/tools');
-  }
+      // Build the destination from the validated query parameters.
+      const queryString = params.toString();
+      const path = queryString
+        ? `${TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH}?${queryString}`
+        : TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH;
 
-  function handleSearchChange(value: string) {
-    updateToolQueryParams({
-      page: TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
-      search: value,
+      router[navigation](path);
+    },
+    [filters, router],
+  );
+
+  // Keep typing local and update the URL only after the debounce delay.
+  const { inputValue: searchInput, setInputValue: setSearchInput } =
+    useDebouncedSearch({
+      serverValue: filters.search,
+      debounceMs: TOOLS_MANAGEMENT.SEARCH_DEBOUNCE_MS,
+      onDebouncedChange: (value) => {
+        updateToolQueryParams(
+          {
+            page: TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+            search: value,
+          },
+          'replace',
+        );
+      },
     });
-  }
 
   function handleStatusFilterChange(value: string) {
     updateToolQueryParams({
@@ -294,8 +325,8 @@ export function ToolsList({
           <Input
             type="search"
             placeholder={TOOLS_PAGE_TEXT.searchPlaceholder}
-            value={filters.search}
-            onChange={(event) => handleSearchChange(event.target.value)}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
           />
         </div>
         <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 lg:max-w-3xl">

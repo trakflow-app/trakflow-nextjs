@@ -1,6 +1,8 @@
 'use server';
 
 import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import { revalidatePath } from 'next/cache';
+import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
 import { requireOrgMember } from '@/lib/dal/auth';
 import { createClient } from '@/lib/supabase/server';
 import { type MaterialUI } from '@/lib/types/materials-types';
@@ -72,6 +74,9 @@ export async function logMaterialUsageAction(params: {
   });
 
   if (error) throw new Error(error.message);
+
+  revalidatePath(MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH);
+
   return data;
 }
 
@@ -103,6 +108,8 @@ export async function createMaterialAction(params: {
     .single();
 
   if (error) throw new Error(error.message);
+
+  revalidatePath(MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH);
 
   return data;
 }
@@ -162,6 +169,8 @@ export async function updateMaterialAction(params: {
     .single();
 
   if (error) throw new Error(error.message);
+
+  revalidatePath(MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH);
 
   return {
     id: data.id,

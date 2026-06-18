@@ -1,4 +1,7 @@
 export const MATERIALS_MANAGEMENT = {
+  ROUTES: {
+    MATERIALS_PATH: '/materials',
+  },
   DEFAULTS: {
     FIRST_PAGE: 1,
     PAGE_SIZE: 10,
@@ -11,6 +14,7 @@ export const MATERIALS_MANAGEMENT = {
     MEDIUM: 25,
     LARGE: 50,
   },
+  SEARCH_DEBOUNCE_MS: 300,
   PAGE_SUMMARY_TOKENS: {
     CURRENT_PAGE: '{currentPage}',
     TOTAL_PAGES: '{totalPages}',

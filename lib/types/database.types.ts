@@ -478,6 +478,23 @@ export type Database = {
       }
     }
     Views: {
+      material_inventory_stats: {
+        Row: {
+          inventory_value: number | null
+          low_stock_count: number | null
+          org_id: string | null
+          total_materials: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       low_stock_materials: {
         Row: {
           created_at: string | null

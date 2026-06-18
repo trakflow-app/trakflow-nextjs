@@ -63,6 +63,7 @@ export const TOOLS_MANAGEMENT = {
     MEDIUM: 12,
     LARGE: 24,
   },
+  SEARCH_DEBOUNCE_MS: 300,
   PAGE_SUMMARY_TOKENS: {
     CURRENT_PAGE: '{currentPage}',
     TOTAL_PAGES: '{totalPages}',
