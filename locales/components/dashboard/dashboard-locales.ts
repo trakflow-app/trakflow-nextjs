@@ -1,4 +1,7 @@
 export const DASHBOARD_TEXT = {
+  loadingPage: 'Loading dashboard content',
+  loadingProjectDetails: 'Loading project details',
+  loadingToolDetails: 'Loading tool details',
   organizationCodePrefix: 'Code:',
   tabsLabel: 'Dashboard sections',
   tabs: {

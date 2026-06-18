@@ -220,45 +220,25 @@ export async function getToolById(
  * Fetches summary counts for the tools inventory.
  */
 export async function getToolStats(orgId: string): Promise<ToolStats> {
+  // Create an authenticated client so the aggregate view respects tool RLS.
   const supabase = await createClient();
-  const [totalResult, availableResult, checkedOutResult, serviceResult] =
-    await Promise.all([
-      supabase
-        .from('tools')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId),
-      supabase
-        .from('tools')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .eq('status', 'AVAILABLE'),
-      supabase
-        .from('tools')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .eq('status', 'CHECKEDOUT'),
-      supabase
-        .from('tools')
-        .select('id', { count: 'exact', head: true })
-        .eq('org_id', orgId)
-        .or(
-          'status.eq.OUT_OF_SERVICE,condition.eq.DAMAGED,condition.eq.OUT_OF_SERVICE',
-        ),
-    ]);
 
-  if (
-    totalResult.error ||
-    availableResult.error ||
-    checkedOutResult.error ||
-    serviceResult.error
-  ) {
+  // Read all tool summary counts from one database aggregate row.
+  const { data, error } = await supabase
+    .from('tool_inventory_stats')
+    .select('available_tools, checked_out_tools, service_tools, total_tools')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  // Surface database or permission failures to the page error boundary.
+  if (error) {
     throw new Error(TOOLS_PAGE_TEXT.loadFailed);
   }
 
   return {
-    availableTools: availableResult.count ?? 0,
-    checkedOutTools: checkedOutResult.count ?? 0,
-    serviceTools: serviceResult.count ?? 0,
-    totalTools: totalResult.count ?? 0,
+    availableTools: data?.available_tools ?? 0,
+    checkedOutTools: data?.checked_out_tools ?? 0,
+    serviceTools: data?.service_tools ?? 0,
+    totalTools: data?.total_tools ?? 0,
   };
 }

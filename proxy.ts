@@ -35,7 +35,8 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  // Verify the JWT and refresh expired sessions without fetching the full user.
+  await supabase.auth.getClaims();
 
   return response;
 }

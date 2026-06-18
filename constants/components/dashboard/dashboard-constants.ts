@@ -26,6 +26,10 @@ export const PROJECT_PROGRESS_FALLBACKS = [75, 45, 90, 30] as const;
 export const DASHBOARD_SHELL_LOGO_SIZE = 44;
 export const DASHBOARD_PROGRESS_BAR_HEIGHT_CLASS_NAME = 'h-2';
 export const CREW_CODE_COPY_RESET_DELAY_MS = 2_000;
+export const DASHBOARD_LOADING_CARD_COUNT = 4;
+export const DASHBOARD_LOADING_ROW_COUNT = 6;
+export const PROJECT_DETAIL_LOADING_SECTION_COUNT = 3;
+export const PROJECT_DETAIL_LOADING_ROW_COUNT = 3;
 
 export type DashboardTabIconKey =
   | 'dashboard'
