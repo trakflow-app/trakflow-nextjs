@@ -12,8 +12,8 @@ export const HOME_PAGE_MESSAGES = {
   },
   hero: {
     eyebrow: 'Built for the field',
-    titleStart: 'Every project.',
-    titleAccent: 'Fully accounted for.',
+    titleStart: 'Know where every tool, ',
+    titleAccent: 'material, and crew stands.',
     description:
       'TrakFlow keeps your projects, crews, materials, and tools moving together, from the first delivery to the final walkthrough.',
     primaryAction: 'Start building free',
@@ -35,12 +35,12 @@ export const HOME_PAGE_MESSAGES = {
       {
         title: 'Project visibility',
         description:
-          'See active jobs, upcoming work, and team progress without chasing updates.',
+          'Know exactly what happened today without making five phone calls.',
       },
       {
         title: 'Materials control',
         description:
-          'Track inventory and usage so the right materials reach the right site on time.',
+          'Stop jobs from stalling because materials weren’t where they needed to be.',
       },
       {
         title: 'Tool accountability',
