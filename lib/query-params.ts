@@ -1,3 +1,7 @@
+import { z } from 'zod';
+
+const UUID_SCHEMA = z.uuid();
+
 /**
  * Reads the first string value for a query parameter.
  */
@@ -38,4 +42,11 @@ export function getAllowedNumber(
   const numericValue = Number(value);
 
   return allowedValues.includes(numericValue) ? numericValue : fallback;
+}
+
+/**
+ * Checks whether a query parameter is a valid UUID.
+ */
+export function isUuid(value: string): boolean {
+  return UUID_SCHEMA.safeParse(value).success;
 }

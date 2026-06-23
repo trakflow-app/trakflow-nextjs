@@ -18,6 +18,7 @@ import {
   getAllowedNumber,
   getPositiveInteger,
   getSearchParamValue,
+  isUuid,
 } from '@/lib/query-params';
 import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 
@@ -92,6 +93,26 @@ function getToolFilters(
 }
 
 /**
+ * Checks whether the project filter is a supported sentinel or organization project.
+ */
+function isValidToolProjectFilter(
+  projectFilter: string,
+  projects: readonly { id: string }[],
+): boolean {
+  if (
+    projectFilter === TOOLS_MANAGEMENT.FILTERS.ALL ||
+    projectFilter === TOOLS_MANAGEMENT.FILTERS.INVENTORY_PROJECT_VALUE
+  ) {
+    return true;
+  }
+
+  return (
+    isUuid(projectFilter) &&
+    projects.some((project) => project.id === projectFilter)
+  );
+}
+
+/**
  * Builds a canonical tools list URL from validated filters.
  */
 function getToolsListPath(filters: ToolListFilters): string {
@@ -152,11 +173,26 @@ export default async function ToolsPage({ searchParams }: ToolsPageProps) {
   const canManageToolRecords = canManageTools(account.role);
   const filters = getToolFilters(resolvedSearchParams);
 
-  // Load list rows, filter options, and summary cards in parallel.
-  const [toolsResult, projects, stats] = await Promise.all([
+  // Start independent project and summary reads together.
+  const projectsPromise = getToolProjects(orgId);
+  const statsPromise = getToolStats(orgId);
+  const projects = await projectsPromise;
+
+  // Reject malformed or cross-organization project filters before querying tools.
+  if (!isValidToolProjectFilter(filters.project, projects)) {
+    redirect(
+      getToolsListPath({
+        ...filters,
+        page: TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+        project: TOOLS_MANAGEMENT.FILTERS.ALL,
+      }),
+    );
+  }
+
+  // Load project-filtered rows after validating project ownership.
+  const [toolsResult, stats] = await Promise.all([
     getTools(orgId, filters),
-    getToolProjects(orgId),
-    getToolStats(orgId),
+    statsPromise,
   ]);
 
   // Redirect invalid high page numbers to the final available page.

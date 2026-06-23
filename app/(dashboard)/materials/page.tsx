@@ -12,6 +12,7 @@ import {
   getAllowedNumber,
   getPositiveInteger,
   getSearchParamValue,
+  isUuid,
 } from '@/lib/query-params';
 
 /**
@@ -51,6 +52,23 @@ function getMaterialFilters(
         MATERIALS_MANAGEMENT.QUERY_PARAMS.search,
       ) ?? '',
   };
+}
+
+/**
+ * Checks whether the project filter is the all-projects sentinel or an organization project.
+ */
+function isValidMaterialProjectFilter(
+  projectFilter: string,
+  projects: readonly { id: string }[],
+): boolean {
+  if (projectFilter === MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS) {
+    return true;
+  }
+
+  return (
+    isUuid(projectFilter) &&
+    projects.some((project) => project.id === projectFilter)
+  );
 }
 
 /**
@@ -105,11 +123,26 @@ export default async function MaterialsPage({
   const orgId = account.org_id as string;
   const filters = getMaterialFilters(resolvedSearchParams);
 
-  // Load list rows, statistics, and project options in parallel.
-  const [materialsResult, materialStats, projects] = await Promise.all([
+  // Start independent project and summary reads together.
+  const projectsPromise = getProjectsForOrg(orgId);
+  const materialStatsPromise = getServerMaterialStats(orgId);
+  const projects = await projectsPromise;
+
+  // Reject malformed or cross-organization project filters before querying materials.
+  if (!isValidMaterialProjectFilter(filters.project, projects)) {
+    redirect(
+      getMaterialsListPath({
+        ...filters,
+        page: MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+        project: MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS,
+      }),
+    );
+  }
+
+  // Load project-filtered rows after validating project ownership.
+  const [materialsResult, materialStats] = await Promise.all([
     getServerMaterialsPage(orgId, filters),
-    getServerMaterialStats(orgId),
-    getProjectsForOrg(orgId),
+    materialStatsPromise,
   ]);
 
   // Redirect invalid high page numbers to the final available page.

@@ -32,6 +32,14 @@ type ProjectsListProps = {
 };
 
 /**
+ * Optimistic project rows tied to the server snapshot they extend.
+ */
+type ProjectOptimisticState = {
+  rows: ProjectRow[];
+  serverProjects: ProjectRow[];
+};
+
+/**
  * Renders the projects workspace.
  *
  * Managers can create and edit projects; crew can only view them.
@@ -45,10 +53,18 @@ export function ProjectsList({
   const [statusFilter, setStatusFilter] = useState<FilterValue>(
     PROJECTS_MANAGEMENT.FILTERS.ALL,
   );
-  const [projectRows, setProjectRows] = useState<ProjectRow[]>(projects);
+  const [optimisticState, setOptimisticState] =
+    useState<ProjectOptimisticState>({
+      rows: projects,
+      serverProjects: projects,
+    });
   const [dialogMode, setDialogMode] = useState<ProjectDialogMode>('create');
   const [projectToEdit, setProjectToEdit] = useState<ProjectRow | null>(null);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+  const projectRows =
+    optimisticState.serverProjects === projects
+      ? optimisticState.rows
+      : projects;
 
   // The page loads all current projects, so search/status filtering is local.
   const filteredProjects = useMemo(
@@ -80,17 +96,29 @@ export function ProjectsList({
 
   function handleProjectCreated(project: ProjectRow) {
     // Show the created project immediately, then refresh server data.
-    setProjectRows((currentProjects) => [project, ...currentProjects]);
+    setOptimisticState((currentState) => ({
+      rows: [
+        project,
+        ...(currentState.serverProjects === projects
+          ? currentState.rows
+          : projects),
+      ],
+      serverProjects: projects,
+    }));
     router.refresh();
   }
 
   function handleProjectUpdated(updatedProject: ProjectRow) {
     // Replace the edited row immediately, then refresh server data.
-    setProjectRows((currentProjects) =>
-      currentProjects.map((project) =>
+    setOptimisticState((currentState) => ({
+      rows: (currentState.serverProjects === projects
+        ? currentState.rows
+        : projects
+      ).map((project) =>
         project.id === updatedProject.id ? updatedProject : project,
       ),
-    );
+      serverProjects: projects,
+    }));
     router.refresh();
   }
 

@@ -100,6 +100,15 @@ type ToolsListProps = {
 };
 
 /**
+ * Optimistic tool changes tied to the server snapshot they extend.
+ */
+type ToolOptimisticState = {
+  deletedToolIds: Set<string>;
+  overrides: Record<string, ToolRow>;
+  serverTools: ToolRow[];
+};
+
+/**
  * Client-side tools card grid with search, filters, pagination, and tool actions.
  */
 export function ToolsList({
@@ -113,12 +122,11 @@ export function ToolsList({
    * State management
    */
   const router = useRouter();
-  const [toolOverrides, setToolOverrides] = useState<Record<string, ToolRow>>(
-    {},
-  );
-  const [deletedToolIds, setDeletedToolIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [optimisticState, setOptimisticState] = useState<ToolOptimisticState>({
+    deletedToolIds: new Set(),
+    overrides: {},
+    serverTools: tools,
+  });
   const [toolToCheckout, setToolToCheckout] = useState<ToolRow | null>(null);
   const [toolToReturn, setToolToReturn] = useState<ToolRow | null>(null);
   const [toolToEdit, setToolToEdit] = useState<ToolRow | null>(null);
@@ -149,13 +157,18 @@ export function ToolsList({
   /**
    * Applies optimistic edits/deletes over the server-loaded tools list.
    */
-  const toolsList = useMemo(
-    () =>
-      tools
-        .map((tool) => toolOverrides[tool.id] ?? tool)
-        .filter((tool) => !deletedToolIds.has(tool.id)),
-    [deletedToolIds, toolOverrides, tools],
-  );
+  const toolsList = useMemo(() => {
+    const activeToolOverrides: Record<string, ToolRow> =
+      optimisticState.serverTools === tools ? optimisticState.overrides : {};
+    const activeDeletedToolIds =
+      optimisticState.serverTools === tools
+        ? optimisticState.deletedToolIds
+        : new Set<string>();
+
+    return tools
+      .map((tool) => activeToolOverrides[tool.id] ?? tool)
+      .filter((tool) => !activeDeletedToolIds.has(tool.id));
+  }, [optimisticState, tools]);
 
   const normalizedCurrentPage = Math.min(filters.page, totalPages);
   const pageSummary = TOOLS_PAGINATION_TEXT.summary
@@ -296,9 +309,16 @@ export function ToolsList({
    * Updates local state immediately, then refreshes server data.
    */
   function handleToolUpdated(updatedTool: ToolRow) {
-    setToolOverrides((currentOverrides) => ({
-      ...currentOverrides,
-      [updatedTool.id]: updatedTool,
+    setOptimisticState((currentState) => ({
+      deletedToolIds:
+        currentState.serverTools === tools
+          ? currentState.deletedToolIds
+          : new Set(),
+      overrides: {
+        ...(currentState.serverTools === tools ? currentState.overrides : {}),
+        [updatedTool.id]: updatedTool,
+      },
+      serverTools: tools,
     }));
     setToolToEdit(null);
     router.refresh();
@@ -309,10 +329,19 @@ export function ToolsList({
    * Removes the tool locally, then refreshes server data.
    */
   function handleToolDeleted(toolId: string) {
-    setDeletedToolIds((currentToolIds) => {
-      const nextToolIds = new Set(currentToolIds);
+    setOptimisticState((currentState) => {
+      const nextToolIds =
+        currentState.serverTools === tools
+          ? new Set(currentState.deletedToolIds)
+          : new Set<string>();
       nextToolIds.add(toolId);
-      return nextToolIds;
+
+      return {
+        deletedToolIds: nextToolIds,
+        overrides:
+          currentState.serverTools === tools ? currentState.overrides : {},
+        serverTools: tools,
+      };
     });
     setToolToDelete(null);
     router.refresh();

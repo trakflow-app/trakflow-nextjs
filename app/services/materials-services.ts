@@ -1,6 +1,9 @@
 'use server';
 
-import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import {
+  createClient as createSupabaseAdminClient,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
 import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
 import { requireOrgMember } from '@/lib/dal/auth';
@@ -10,6 +13,7 @@ import { type Database } from '@/lib/types/database.types';
 import { materialsTable } from '@/locales/components/materials/materials-table-locales';
 
 const MATERIAL_SERVICE_ERRORS = {
+  invalidProject: 'The selected project does not belong to your organization',
   missingServerConfig: 'Missing Supabase server configuration',
   permissionDenied: 'You do not have permission to manage materials',
 };
@@ -55,6 +59,30 @@ async function requireMaterialManager(orgId?: string | null) {
 }
 
 /**
+ * Verifies that a material assignment targets a project in the same organization.
+ */
+async function requireProjectInOrganization(
+  adminSupabase: SupabaseClient<Database>,
+  projectId: string | null | undefined,
+  orgId: string,
+): Promise<void> {
+  if (!projectId) {
+    return;
+  }
+
+  const { data, error } = await adminSupabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.invalidProject);
+  }
+}
+
+/**
  * Function that record the log consumption of the materials
  */
 export async function logMaterialUsageAction(params: {
@@ -93,6 +121,8 @@ export async function createMaterialAction(params: {
 }) {
   const orgId = await requireMaterialManager(params.orgId);
   const adminSupabase = createAdminClient();
+
+  await requireProjectInOrganization(adminSupabase, params.projectId, orgId);
 
   const { data, error } = await adminSupabase
     .from('materials')
@@ -141,6 +171,8 @@ export async function updateMaterialAction(params: {
 
   const orgId = await requireMaterialManager(params.orgId);
   const adminSupabase = createAdminClient();
+
+  await requireProjectInOrganization(adminSupabase, params.projectId, orgId);
 
   const updateValues: Database['public']['Tables']['materials']['Update'] = {
     name: params.name,

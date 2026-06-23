@@ -36,6 +36,14 @@ type MaterialsClientProps = {
 type MaterialOverrides = Record<string, MaterialUI>;
 
 /**
+ * Optimistic values tied to the server snapshot they extend.
+ */
+type MaterialOptimisticState = {
+  overrides: MaterialOverrides;
+  serverMaterials: MaterialUI[];
+};
+
+/**
  * Client-side materials workspace for filters, modals, and optimistic updates.
  */
 export function MaterialsClient({
@@ -47,9 +55,11 @@ export function MaterialsClient({
   totalPages,
 }: MaterialsClientProps) {
   const router = useRouter();
-  const [materialOverrides, setMaterialOverrides] = useState<MaterialOverrides>(
-    {},
-  );
+  const [optimisticState, setOptimisticState] =
+    useState<MaterialOptimisticState>({
+      overrides: {},
+      serverMaterials: initialMaterials,
+    });
 
   const [usageModalOpen, setUsageModalOpen] = useState(false);
   const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(
@@ -72,13 +82,16 @@ export function MaterialsClient({
   /**
    * Applies local edits and usage changes over the current server page.
    */
-  const materials = useMemo(
-    () =>
-      initialMaterials.map(
-        (material) => materialOverrides[material.id] ?? material,
-      ),
-    [initialMaterials, materialOverrides],
-  );
+  const materials = useMemo(() => {
+    const materialOverrides =
+      optimisticState.serverMaterials === initialMaterials
+        ? optimisticState.overrides
+        : {};
+
+    return initialMaterials.map(
+      (material) => materialOverrides[material.id] ?? material,
+    );
+  }, [initialMaterials, optimisticState]);
 
   const selectedEditMaterial = useMemo(
     () =>
@@ -215,12 +228,17 @@ export function MaterialsClient({
       currentMaterial.quantity - data.quantityUsed,
     );
 
-    setMaterialOverrides((currentOverrides) => ({
-      ...currentOverrides,
-      [data.materialId]: {
-        ...currentMaterial,
-        quantity: newQuantity,
-        totalValue: newQuantity * currentMaterial.unitCost,
+    setOptimisticState((currentState) => ({
+      serverMaterials: initialMaterials,
+      overrides: {
+        ...(currentState.serverMaterials === initialMaterials
+          ? currentState.overrides
+          : {}),
+        [data.materialId]: {
+          ...currentMaterial,
+          quantity: newQuantity,
+          totalValue: newQuantity * currentMaterial.unitCost,
+        },
       },
     }));
     router.refresh();
@@ -238,9 +256,14 @@ export function MaterialsClient({
 
   function handleEditSubmitSuccess(updatedMaterial: MaterialUI) {
     // Keep the edited row visible immediately while the server refresh catches up.
-    setMaterialOverrides((currentOverrides) => ({
-      ...currentOverrides,
-      [updatedMaterial.id]: updatedMaterial,
+    setOptimisticState((currentState) => ({
+      serverMaterials: initialMaterials,
+      overrides: {
+        ...(currentState.serverMaterials === initialMaterials
+          ? currentState.overrides
+          : {}),
+        [updatedMaterial.id]: updatedMaterial,
+      },
     }));
     router.refresh();
   }
