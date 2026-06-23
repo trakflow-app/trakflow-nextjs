@@ -9,33 +9,34 @@ export const HOME_PAGE_LOGIN_HREF = '/login';
 export const HOME_PAGE_SIGNUP_HREF = '/signup';
 
 /**
- * Destination for crew registration with a code.
+ * Anchor destinations used by landing-page navigation.
  */
-export const HOME_PAGE_CREW_SIGNUP_HREF = '/signup/crew';
+export const HOME_PAGE_ANCHORS = {
+  features: '#features',
+  workflow: '#workflow',
+  pricing: '#pricing',
+} as const;
 
 /**
  * Current home page feature image.
  */
-export const HOME_PAGE_IMAGE_SRC = '/construction-site-01.jpg';
+export const HOME_PAGE_IMAGE_SRC = '/construction-site-03.jpg';
 
 /**
- * Intrinsic width for the home page feature image.
+ * Secondary home page image.
  */
-export const HOME_PAGE_IMAGE_WIDTH = 1920;
+export const HOME_PAGE_SECONDARY_IMAGE_SRC = '/construction-site-02.jpg';
 
 /**
- * Intrinsic height for the home page feature image.
+ * Intrinsic dimensions for landing-page images.
  */
-export const HOME_PAGE_IMAGE_HEIGHT = 1280;
+export const HOME_PAGE_IMAGE_SIZE = {
+  width: 1920,
+  height: 1280,
+} as const;
 
 /**
- * Shared presentation classes for secondary home page links.
+ * Shared width constraint for landing-page content.
  */
-export const HOME_PAGE_SECONDARY_LINK_CLASS_NAME =
-  'font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50';
-
-/**
- * Presentation classes for the bordered home page panel.
- */
-export const HOME_PAGE_PANEL_CLASS_NAME =
-  'grid w-full max-w-6xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg lg:grid-cols-2';
+export const HOME_PAGE_CONTAINER_CLASS_NAME =
+  'mx-auto w-full max-w-7xl px-5 sm:px-8 lg:px-10';
