@@ -1,8 +1,14 @@
 export const loginForm = {
-  title: 'Welcome back',
-  description: 'Login to your account',
+  title: 'Welcome to TrakFlow',
+  description: 'Sign in to manage projects, crews, materials, and tools.',
+  imageAlt: 'Construction site with workers and heavy equipment',
+  imageTitle: 'Manage your construction projects with ease',
+  imageDescription:
+    'TrakFlow helps you manage your construction projects, crews, materials, and tools all in one place.',
   dontHaveAccount: "Don't have an account?",
-  signupLink: 'Sign up',
+  signupLink: 'Create one',
+  crewSignupPrompt: 'Joining a crew?',
+  crewSignupLink: 'Use a crew code',
   email: {
     label: 'Email',
     placeholder: 'you@example.com',
