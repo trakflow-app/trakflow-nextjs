@@ -8,9 +8,9 @@ import { FOREMAN_INVITE_PAGE_MESSAGES } from '@/locales/app/(dashboard)/foreman/
  */
 export default async function ForemanInvitePage() {
   // requireRole handles auth check, role check, and redirect — no repetition needed
-  await requireRole('FOREMAN');
-
-  const joinCode = await getOrgJoinCode();
+  const { account } = await requireRole('FOREMAN');
+  // Fetch the org join code for display.
+  const joinCode = await getOrgJoinCode(account.org_id as string);
 
   return (
     <div className="mx-auto max-w-2xl space-y-10 px-4 py-10">

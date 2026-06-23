@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PROJECT_DETAIL_MESSAGES } from '@/locales/app/(dashboard)/projects/[id]/page-locales';
-import type { ProjectTool } from '@/lib/dal/projects';
+import type { ProjectDetailTool } from '@/lib/dal/projects';
 import type { Database } from '@/lib/types/database.types';
 
 type ToolStatus = Database['public']['Enums']['tool_status'];
@@ -36,7 +36,7 @@ const TOOL_CONDITION_CLASSES: Record<ToolCondition, string> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface ProjectToolsSectionProps {
-  tools: ProjectTool[];
+  tools: ProjectDetailTool[];
 }
 
 /**

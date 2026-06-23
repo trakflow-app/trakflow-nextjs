@@ -2,19 +2,24 @@ import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
 import type {
-  OrgMember,
-  ProjectMaterial,
+  ProjectDetailMaterial,
+  ProjectDetailTool,
   ProjectOption,
   ProjectRow,
-  ProjectTool,
+  ProjectTeamMember,
 } from '@/lib/dal/projects';
 
 const PROJECTS_SELECT_COLUMNS = 'id, project_name';
 const PROJECTS_LIST_SELECT_COLUMNS =
   'id, org_id, project_name, status, start_date, end_date, budget_amount, created_at';
+const PROJECT_DETAIL_TOOLS_SELECT_COLUMNS =
+  'id, tag_number, name, status, condition';
+const PROJECT_DETAIL_MATERIALS_SELECT_COLUMNS =
+  'id, name, unit_qty, unit_cost, low_stock_threshold';
+const PROJECT_TEAM_SELECT_COLUMNS = 'id, name, role';
 
 /**
- * Fetches projects for a specific organization using the server session.
+ * Fetches project options for selectors in the current organization.
  */
 export async function getProjectsForOrg(
   orgId: string,
@@ -36,7 +41,7 @@ export async function getProjectsForOrg(
 }
 
 /**
- * Fetches project list rows for a specific organization using the server session.
+ * Fetches all project list rows for the projects page.
  */
 export async function getServerProjects(orgId: string): Promise<ProjectRow[]> {
   const supabase = await createClient();
@@ -53,7 +58,28 @@ export async function getServerProjects(orgId: string): Promise<ProjectRow[]> {
 }
 
 /**
- * Fetches one project by id using the server session.
+ * Fetches only the newest projects needed by dashboard summary cards.
+ */
+export async function getRecentServerProjects(
+  orgId: string,
+  limit: number,
+): Promise<ProjectRow[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select(PROJECTS_LIST_SELECT_COLUMNS)
+    .eq('org_id', orgId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
+/**
+ * Fetches one project by id while keeping the query scoped to the organization.
  */
 export async function getServerProjectById(
   projectId: string,
@@ -77,17 +103,17 @@ export async function getServerProjectById(
 }
 
 /**
- * Fetches tools assigned to a project using the server session.
+ * Fetches tools assigned to a project for the project detail page.
  */
 export async function getServerProjectTools(
   projectId: string,
   orgId: string,
-): Promise<ProjectTool[]> {
+): Promise<ProjectDetailTool[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('tools')
-    .select('*')
+    .select(PROJECT_DETAIL_TOOLS_SELECT_COLUMNS)
     .eq('project_id', projectId)
     .eq('org_id', orgId)
     .order('created_at', { ascending: false });
@@ -98,17 +124,17 @@ export async function getServerProjectTools(
 }
 
 /**
- * Fetches materials assigned to a project using the server session.
+ * Fetches materials assigned to a project for the project detail page.
  */
 export async function getServerProjectMaterials(
   projectId: string,
   orgId: string,
-): Promise<ProjectMaterial[]> {
+): Promise<ProjectDetailMaterial[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('materials')
-    .select('*')
+    .select(PROJECT_DETAIL_MATERIALS_SELECT_COLUMNS)
     .eq('project_id', projectId)
     .eq('org_id', orgId)
     .order('created_at', { ascending: false });
@@ -119,14 +145,16 @@ export async function getServerProjectMaterials(
 }
 
 /**
- * Fetches organization members using the server session.
+ * Fetches organization members for the project team section.
  */
-export async function getServerOrgMembers(orgId: string): Promise<OrgMember[]> {
+export async function getServerOrgMembers(
+  orgId: string,
+): Promise<ProjectTeamMember[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('accounts')
-    .select('id, name, email, role, org_id, created_at')
+    .select(PROJECT_TEAM_SELECT_COLUMNS)
     .eq('org_id', orgId)
     .order('name', { ascending: true });
 

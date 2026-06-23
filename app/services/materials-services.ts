@@ -1,18 +1,24 @@
 'use server';
 
-import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import {
+  createClient as createSupabaseAdminClient,
+  type SupabaseClient,
+} from '@supabase/supabase-js';
+import { revalidatePath } from 'next/cache';
+import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
+import { requireOrgMember } from '@/lib/dal/auth';
 import { createClient } from '@/lib/supabase/server';
-import { type MaterialUI } from '@/lib/dal/materials';
+import { type MaterialUI } from '@/lib/types/materials-types';
 import { type Database } from '@/lib/types/database.types';
+import { materialsTable } from '@/locales/components/materials/materials-table-locales';
 
 const MATERIAL_SERVICE_ERRORS = {
+  invalidProject: 'The selected project does not belong to your organization',
   missingServerConfig: 'Missing Supabase server configuration',
-  notAuthenticated: 'You must be signed in to manage materials',
-  accountNotFound: 'Account details could not be loaded',
   permissionDenied: 'You do not have permission to manage materials',
 };
 
-const MATERIAL_MANAGER_ROLES = ['OWNER', 'FOREMAN'];
+const MATERIAL_MANAGER_ROLES = ['OWNER', 'FOREMAN'] as const;
 
 /**
  * Creates a Supabase admin client for server-side material writes.
@@ -31,6 +37,49 @@ function createAdminClient() {
       persistSession: false,
     },
   });
+}
+
+/**
+ * Ensures the current org member can mutate materials for the requested org.
+ */
+async function requireMaterialManager(orgId?: string | null) {
+  const { account } = await requireOrgMember();
+  const resolvedOrgId = orgId ?? account.org_id;
+  const canManageMaterials =
+    account.org_id === resolvedOrgId &&
+    MATERIAL_MANAGER_ROLES.includes(
+      account.role as (typeof MATERIAL_MANAGER_ROLES)[number],
+    );
+
+  if (!canManageMaterials || !resolvedOrgId) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
+  }
+
+  return resolvedOrgId;
+}
+
+/**
+ * Verifies that a material assignment targets a project in the same organization.
+ */
+async function requireProjectInOrganization(
+  adminSupabase: SupabaseClient<Database>,
+  projectId: string | null | undefined,
+  orgId: string,
+): Promise<void> {
+  if (!projectId) {
+    return;
+  }
+
+  const { data, error } = await adminSupabase
+    .from('projects')
+    .select('id')
+    .eq('id', projectId)
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new Error(MATERIAL_SERVICE_ERRORS.invalidProject);
+  }
 }
 
 /**
@@ -53,6 +102,9 @@ export async function logMaterialUsageAction(params: {
   });
 
   if (error) throw new Error(error.message);
+
+  revalidatePath(MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH);
+
   return data;
 }
 
@@ -67,41 +119,15 @@ export async function createMaterialAction(params: {
   unitCost: number;
   lowStockThreshold: number;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.notAuthenticated);
-  }
-
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .select('org_id, role')
-    .eq('id', user.id)
-    .single();
-
-  if (accountError || !account?.org_id || !account?.role) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
-  }
-
-  const canManageMaterials =
-    account.org_id === params.orgId &&
-    MATERIAL_MANAGER_ROLES.includes(account.role);
-
-  if (!canManageMaterials) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
-  }
-
+  const orgId = await requireMaterialManager(params.orgId);
   const adminSupabase = createAdminClient();
+
+  await requireProjectInOrganization(adminSupabase, params.projectId, orgId);
 
   const { data, error } = await adminSupabase
     .from('materials')
     .insert({
-      org_id: params.orgId,
+      org_id: orgId,
       name: params.name,
       project_id: params.projectId || null,
       unit_qty: params.quantity,
@@ -112,6 +138,8 @@ export async function createMaterialAction(params: {
     .single();
 
   if (error) throw new Error(error.message);
+
+  revalidatePath(MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH);
 
   return data;
 }
@@ -141,36 +169,10 @@ export async function updateMaterialAction(params: {
     throw new Error('Low stock threshold is required');
   }
 
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.notAuthenticated);
-  }
-
-  const { data: account, error: accountError } = await supabase
-    .from('accounts')
-    .select('org_id, role')
-    .eq('id', user.id)
-    .single();
-
-  if (accountError || !account?.org_id || !account?.role) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.accountNotFound);
-  }
-
-  const orgId = params.orgId ?? account.org_id;
-  const canManageMaterials =
-    account.org_id === orgId && MATERIAL_MANAGER_ROLES.includes(account.role);
-
-  if (!canManageMaterials) {
-    throw new Error(MATERIAL_SERVICE_ERRORS.permissionDenied);
-  }
-
+  const orgId = await requireMaterialManager(params.orgId);
   const adminSupabase = createAdminClient();
+
+  await requireProjectInOrganization(adminSupabase, params.projectId, orgId);
 
   const updateValues: Database['public']['Tables']['materials']['Update'] = {
     name: params.name,
@@ -200,15 +202,17 @@ export async function updateMaterialAction(params: {
 
   if (error) throw new Error(error.message);
 
+  revalidatePath(MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH);
+
   return {
     id: data.id,
     name: data.name,
     projectId: data.project_id,
-    projectName: data.projects?.project_name || 'Unassigned',
+    projectName:
+      data.projects?.project_name || materialsTable.orgInventoryLabel,
     quantity: data.unit_qty,
     minQuantity: data.low_stock_threshold,
     unitCost: data.unit_cost,
     totalValue: data.unit_qty * data.unit_cost,
-    unit: 'units',
   };
 }

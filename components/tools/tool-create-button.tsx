@@ -75,6 +75,10 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
    * Clears local upload state when the create dialog closes.
    */
   function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && isPending) {
+      return;
+    }
+
     if (!nextOpen) {
       setImageFileName('');
     }
@@ -147,19 +151,6 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
                 id={TOOLS_MANAGEMENT.FORM_KEYS.name}
                 name={TOOLS_MANAGEMENT.FORM_KEYS.name}
                 placeholder={TOOL_CREATE_TEXT.namePlaceholder}
-                required
-              />
-            </ToolCreateFormField>
-            <ToolCreateFormField
-              label={TOOL_CREATE_TEXT.tagNumberLabel}
-              htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
-            >
-              <Input
-                id={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
-                name={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
-                type="number"
-                min={TOOLS_MANAGEMENT.LIMITS.MIN_TAG_NUMBER}
-                placeholder={TOOL_CREATE_TEXT.tagNumberPlaceholder}
                 required
               />
             </ToolCreateFormField>
@@ -242,7 +233,7 @@ export function ToolCreateButton({ projects }: ToolCreateButtonProps) {
                 {TOOL_CREATE_TEXT.cancelButton}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" isLoading={isPending}>
               {TOOL_CREATE_TEXT.createButton}
             </Button>
           </DialogFooter>

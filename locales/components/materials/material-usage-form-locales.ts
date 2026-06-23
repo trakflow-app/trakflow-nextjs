@@ -5,12 +5,17 @@
 export const materialUsageFormLocales = {
   // Labels
   projectLabel: 'Project',
+  projectAssignmentLabel: 'Assigned Project',
+  projectSelectionLabel: 'Consuming Project',
   inStockLabel: 'In Stock (Remaining)',
   quantityUsedLabel: 'Quantity Used',
   quantityUsedRequired: 'Quantity Used *',
   notesLabel: 'Notes',
+  noProjectsAvailable:
+    'Create a project before logging usage from org inventory.',
 
   // Placeholders
+  projectPlaceholder: 'Select the project using this material',
   quantityPlaceholder: '0.00',
   notesPlaceholder: 'Optional notes',
 

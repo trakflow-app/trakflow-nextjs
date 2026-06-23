@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 import type { ChangeEvent, FormEvent, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -57,7 +57,7 @@ import { Label } from '@/components/ui/label';
 import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import { Textarea } from '@/components/ui/textarea';
 import type { ProjectRow } from '@/lib/dal/projects';
-import type { ToolAssignmentType, ToolRow, ToolStatus } from '@/lib/dal/tools';
+import type { ToolListFilters, ToolRow } from '@/lib/dal/tools';
 import {
   compressToolCatalogImage,
   compressToolEvidenceImage,
@@ -78,52 +78,55 @@ import {
   TOOL_STATUS_LABELS,
 } from '@/locales/app/(dashboard)/tools/tools-page-locales';
 import type { Database } from '@/lib/types/database.types';
+import { useDebouncedSearch } from '@/hooks/use-debounced-search';
 
-type FilterValue = 'all' | ToolStatus;
-type TypeFilterValue = 'all' | ToolAssignmentType;
-type ProjectFilterValue = 'all' | 'inventory' | string;
 type ToolCondition = Database['public']['Enums']['tool_condition'];
+type ToolStatus = Database['public']['Enums']['tool_status'];
+
+/**
+ * Minimal project fields needed by tool filters and edit forms.
+ */
 type ToolProject = Pick<ProjectRow, 'id' | 'project_name'>;
 
 const EDIT_TOOL_IMAGE_INPUT_ID = `${TOOLS_MANAGEMENT.FORM_KEYS.imageFile}-edit`;
 const RETURN_TOOL_IMAGE_INPUT_ID = `${TOOLS_MANAGEMENT.FORM_KEYS.returnImageFile}-return`;
 
 type ToolsListProps = {
-  tools: ToolRow[];
-  projects: ToolProject[];
   canManageTools: boolean;
+  filters: ToolListFilters;
+  projects: ToolProject[];
+  tools: ToolRow[];
+  totalPages: number;
+};
+
+/**
+ * Optimistic tool changes tied to the server snapshot they extend.
+ */
+type ToolOptimisticState = {
+  deletedToolIds: Set<string>;
+  overrides: Record<string, ToolRow>;
+  serverTools: ToolRow[];
 };
 
 /**
  * Client-side tools card grid with search, filters, pagination, and tool actions.
  */
-export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
+export function ToolsList({
+  canManageTools,
+  filters,
+  projects,
+  tools,
+  totalPages,
+}: ToolsListProps) {
   /**
    * State management
    */
   const router = useRouter();
-  const [toolOverrides, setToolOverrides] = useState<Record<string, ToolRow>>(
-    {},
-  );
-  const [deletedToolIds, setDeletedToolIds] = useState<Set<string>>(
-    () => new Set(),
-  );
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FilterValue>(
-    TOOLS_MANAGEMENT.FILTERS.ALL,
-  );
-  const [typeFilter, setTypeFilter] = useState<TypeFilterValue>(
-    TOOLS_MANAGEMENT.FILTERS.ALL,
-  );
-  const [projectFilter, setProjectFilter] = useState<ProjectFilterValue>(
-    TOOLS_MANAGEMENT.FILTERS.ALL,
-  );
-  const [currentPage, setCurrentPage] = useState<number>(
-    TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
-  );
-  const [pageSize, setPageSize] = useState<number>(
-    TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE,
-  );
+  const [optimisticState, setOptimisticState] = useState<ToolOptimisticState>({
+    deletedToolIds: new Set(),
+    overrides: {},
+    serverTools: tools,
+  });
   const [toolToCheckout, setToolToCheckout] = useState<ToolRow | null>(null);
   const [toolToReturn, setToolToReturn] = useState<ToolRow | null>(null);
   const [toolToEdit, setToolToEdit] = useState<ToolRow | null>(null);
@@ -154,54 +157,20 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
   /**
    * Applies optimistic edits/deletes over the server-loaded tools list.
    */
-  const toolsList = useMemo(
-    () =>
-      tools
-        .map((tool) => toolOverrides[tool.id] ?? tool)
-        .filter((tool) => !deletedToolIds.has(tool.id)),
-    [deletedToolIds, toolOverrides, tools],
-  );
+  const toolsList = useMemo(() => {
+    const activeToolOverrides: Record<string, ToolRow> =
+      optimisticState.serverTools === tools ? optimisticState.overrides : {};
+    const activeDeletedToolIds =
+      optimisticState.serverTools === tools
+        ? optimisticState.deletedToolIds
+        : new Set<string>();
 
-  /**
-   * Filter Logic: useMemo for larger tool inventories.
-   * Narrows tools by search, status, assignment type, and project.
-   */
-  const filteredTools = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
+    return tools
+      .map((tool) => activeToolOverrides[tool.id] ?? tool)
+      .filter((tool) => !activeDeletedToolIds.has(tool.id));
+  }, [optimisticState, tools]);
 
-    return toolsList.filter((tool) => {
-      const matchesSearch =
-        !normalizedSearch || tool.name.toLowerCase().includes(normalizedSearch);
-      const matchesStatus =
-        statusFilter === TOOLS_MANAGEMENT.FILTERS.ALL ||
-        tool.status === statusFilter;
-      const matchesType =
-        typeFilter === TOOLS_MANAGEMENT.FILTERS.ALL || tool.type === typeFilter;
-      const matchesProject =
-        projectFilter === TOOLS_MANAGEMENT.FILTERS.ALL ||
-        (projectFilter === TOOLS_MANAGEMENT.FILTERS.INVENTORY_PROJECT_VALUE &&
-          !tool.projectId) ||
-        tool.projectId === projectFilter;
-
-      return matchesSearch && matchesStatus && matchesType && matchesProject;
-    });
-  }, [projectFilter, search, statusFilter, toolsList, typeFilter]);
-
-  /**
-   * Pagination state:
-   * Calculates the visible tool page and page summary text.
-   */
-  const totalPages = Math.max(
-    TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
-    Math.ceil(filteredTools.length / pageSize),
-  );
-  const normalizedCurrentPage = Math.min(currentPage, totalPages);
-  const pageStartIndex =
-    (normalizedCurrentPage - TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE) * pageSize;
-  const paginatedTools = filteredTools.slice(
-    pageStartIndex,
-    pageStartIndex + pageSize,
-  );
+  const normalizedCurrentPage = Math.min(filters.page, totalPages);
   const pageSummary = TOOLS_PAGINATION_TEXT.summary
     .replace(
       TOOLS_MANAGEMENT.PAGE_SUMMARY_TOKENS.CURRENT_PAGE,
@@ -213,35 +182,112 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
     );
 
   /**
-   * Resets pagination whenever filters or search change.
+   * Updates URL search params so the server returns the matching tool page.
    */
-  function resetPagination() {
-    setCurrentPage(TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE);
-  }
+  const updateToolQueryParams = useCallback(
+    (
+      nextParams: Partial<ToolListFilters>,
+      navigation: 'push' | 'replace' = 'push',
+    ) => {
+      // Build a complete query from the current filters and requested changes.
+      const params = new URLSearchParams();
+      const mergedFilters = {
+        ...filters,
+        ...nextParams,
+      };
 
-  function handleSearchChange(value: string) {
-    setSearch(value);
-    resetPagination();
-  }
+      // Include search only when it has a value.
+      if (mergedFilters.search) {
+        params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.search, mergedFilters.search);
+      }
+
+      // Include status only when it differs from the default.
+      if (mergedFilters.status !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+        params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.status, mergedFilters.status);
+      }
+
+      // Include assignment type only when it differs from the default.
+      if (mergedFilters.type !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+        params.set(TOOLS_MANAGEMENT.QUERY_PARAMS.type, mergedFilters.type);
+      }
+
+      // Include project only when it differs from the default.
+      if (mergedFilters.project !== TOOLS_MANAGEMENT.FILTERS.ALL) {
+        params.set(
+          TOOLS_MANAGEMENT.QUERY_PARAMS.project,
+          mergedFilters.project,
+        );
+      }
+
+      // Include page only when it is not the first page.
+      if (mergedFilters.page !== TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE) {
+        params.set(
+          TOOLS_MANAGEMENT.QUERY_PARAMS.page,
+          String(mergedFilters.page),
+        );
+      }
+
+      // Include page size only when it differs from the default.
+      if (mergedFilters.pageSize !== TOOLS_MANAGEMENT.DEFAULTS.PAGE_SIZE) {
+        params.set(
+          TOOLS_MANAGEMENT.QUERY_PARAMS.pageSize,
+          String(mergedFilters.pageSize),
+        );
+      }
+
+      // Build the destination from the validated query parameters.
+      const queryString = params.toString();
+      const path = queryString
+        ? `${TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH}?${queryString}`
+        : TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH;
+
+      router[navigation](path);
+    },
+    [filters, router],
+  );
+
+  // Keep typing local and update the URL only after the debounce delay.
+  const { inputValue: searchInput, setInputValue: setSearchInput } =
+    useDebouncedSearch({
+      serverValue: filters.search,
+      debounceMs: TOOLS_MANAGEMENT.SEARCH_DEBOUNCE_MS,
+      onDebouncedChange: (value) => {
+        updateToolQueryParams(
+          {
+            page: TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+            search: value,
+          },
+          'replace',
+        );
+      },
+    });
 
   function handleStatusFilterChange(value: string) {
-    setStatusFilter(value as FilterValue);
-    resetPagination();
+    updateToolQueryParams({
+      page: TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+      status: value,
+    });
   }
 
   function handleTypeFilterChange(value: string) {
-    setTypeFilter(value as TypeFilterValue);
-    resetPagination();
+    updateToolQueryParams({
+      page: TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+      type: value,
+    });
   }
 
   function handleProjectFilterChange(value: string) {
-    setProjectFilter(value as ProjectFilterValue);
-    resetPagination();
+    updateToolQueryParams({
+      page: TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+      project: value,
+    });
   }
 
   function handlePageSizeChange(value: string) {
-    setPageSize(Number(value));
-    resetPagination();
+    updateToolQueryParams({
+      page: TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+      pageSize: Number(value),
+    });
   }
 
   /**
@@ -263,9 +309,16 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
    * Updates local state immediately, then refreshes server data.
    */
   function handleToolUpdated(updatedTool: ToolRow) {
-    setToolOverrides((currentOverrides) => ({
-      ...currentOverrides,
-      [updatedTool.id]: updatedTool,
+    setOptimisticState((currentState) => ({
+      deletedToolIds:
+        currentState.serverTools === tools
+          ? currentState.deletedToolIds
+          : new Set(),
+      overrides: {
+        ...(currentState.serverTools === tools ? currentState.overrides : {}),
+        [updatedTool.id]: updatedTool,
+      },
+      serverTools: tools,
     }));
     setToolToEdit(null);
     router.refresh();
@@ -276,10 +329,19 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
    * Removes the tool locally, then refreshes server data.
    */
   function handleToolDeleted(toolId: string) {
-    setDeletedToolIds((currentToolIds) => {
-      const nextToolIds = new Set(currentToolIds);
+    setOptimisticState((currentState) => {
+      const nextToolIds =
+        currentState.serverTools === tools
+          ? new Set(currentState.deletedToolIds)
+          : new Set<string>();
       nextToolIds.add(toolId);
-      return nextToolIds;
+
+      return {
+        deletedToolIds: nextToolIds,
+        overrides:
+          currentState.serverTools === tools ? currentState.overrides : {},
+        serverTools: tools,
+      };
     });
     setToolToDelete(null);
     router.refresh();
@@ -292,36 +354,36 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
           <Input
             type="search"
             placeholder={TOOLS_PAGE_TEXT.searchPlaceholder}
-            value={search}
-            onChange={(event) => handleSearchChange(event.target.value)}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
           />
         </div>
         <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3 lg:max-w-3xl">
           <SelectField
             className="w-full"
             options={projectOptions}
-            value={projectFilter}
+            value={filters.project}
             onChange={handleProjectFilterChange}
             placeholder={TOOLS_PAGE_TEXT.projectFilterPlaceholder}
           />
           <SelectField
             className="w-full"
             options={TOOL_STATUS_FILTER_OPTIONS}
-            value={statusFilter}
+            value={filters.status}
             onChange={handleStatusFilterChange}
             placeholder={TOOLS_PAGE_TEXT.statusFilterPlaceholder}
           />
           <SelectField
             className="w-full"
             options={TOOL_TYPE_FILTER_OPTIONS}
-            value={typeFilter}
+            value={filters.type}
             onChange={handleTypeFilterChange}
             placeholder={TOOLS_PAGE_TEXT.typeFilterPlaceholder}
           />
         </div>
       </div>
 
-      {filteredTools.length === 0 ? (
+      {toolsList.length === 0 ? (
         <EmptyState
           icon={FolderOpen}
           title={TOOLS_PAGE_TEXT.noToolsTitle}
@@ -330,7 +392,7 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
       ) : (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {paginatedTools.map((tool) => (
+            {toolsList.map((tool) => (
               <ToolCard
                 key={tool.id}
                 tool={tool}
@@ -351,7 +413,7 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
               </span>
               <SelectField
                 options={TOOL_PAGE_SIZE_OPTIONS}
-                value={String(pageSize)}
+                value={String(filters.pageSize)}
                 onChange={handlePageSizeChange}
                 placeholder={TOOLS_PAGINATION_TEXT.pageSizeLabel}
                 className="w-20"
@@ -370,9 +432,12 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
                     TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE
                   }
                   onClick={() =>
-                    setCurrentPage((page) =>
-                      Math.max(TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE, page - 1),
-                    )
+                    updateToolQueryParams({
+                      page: Math.max(
+                        TOOLS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+                        normalizedCurrentPage - 1,
+                      ),
+                    })
                   }
                 >
                   <ChevronLeft data-icon="inline-start" />
@@ -383,7 +448,9 @@ export function ToolsList({ tools, projects, canManageTools }: ToolsListProps) {
                   size="sm"
                   disabled={normalizedCurrentPage === totalPages}
                   onClick={() =>
-                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                    updateToolQueryParams({
+                      page: Math.min(totalPages, normalizedCurrentPage + 1),
+                    })
                   }
                 >
                   {TOOLS_PAGINATION_TEXT.nextButton}
@@ -694,7 +761,7 @@ function ToolCheckoutDialog({
               >
                 {TOOL_CHECKOUT_TEXT.cancelButton}
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" isLoading={isPending}>
                 {TOOL_CHECKOUT_TEXT.confirmButton}
               </Button>
             </DialogFooter>
@@ -842,7 +909,7 @@ function ToolReturnDialog({
               >
                 {TOOL_RETURN_TEXT.cancelButton}
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" isLoading={isPending}>
                 {TOOL_RETURN_TEXT.confirmButton}
               </Button>
             </DialogFooter>
@@ -902,6 +969,10 @@ function ToolEditDialog({
    * Clears local upload state when the edit dialog closes.
    */
   function handleOpenChange(open: boolean) {
+    if (!open && isPending) {
+      return;
+    }
+
     if (!open) {
       setImageFileName('');
     }
@@ -940,9 +1011,6 @@ function ToolEditDialog({
           return;
         }
 
-        const tagNumberValue = formData.get(
-          TOOLS_MANAGEMENT.FORM_KEYS.tagNumber,
-        );
         const nameValue = formData.get(TOOLS_MANAGEMENT.FORM_KEYS.name);
         const statusValue = formData.get(TOOLS_MANAGEMENT.FORM_KEYS.status);
         const conditionValue = formData.get(
@@ -960,10 +1028,6 @@ function ToolEditDialog({
         const updatedTool: ToolRow = {
           ...tool,
           name: typeof nameValue === 'string' ? nameValue.trim() : tool.name,
-          tagNumber:
-            typeof tagNumberValue === 'string'
-              ? Number(tagNumberValue)
-              : tool.tagNumber,
           status:
             typeof statusValue === 'string'
               ? (statusValue as ToolStatus)
@@ -1012,20 +1076,6 @@ function ToolEditDialog({
                   name={TOOLS_MANAGEMENT.FORM_KEYS.name}
                   defaultValue={tool.name}
                   placeholder={TOOL_EDIT_TEXT.namePlaceholder}
-                  required
-                />
-              </ToolFormField>
-              <ToolFormField
-                label={TOOL_EDIT_TEXT.tagNumberLabel}
-                htmlFor={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
-              >
-                <Input
-                  id={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
-                  name={TOOLS_MANAGEMENT.FORM_KEYS.tagNumber}
-                  type="number"
-                  min={TOOLS_MANAGEMENT.LIMITS.MIN_TAG_NUMBER}
-                  defaultValue={tool.tagNumber}
-                  placeholder={TOOL_EDIT_TEXT.tagNumberPlaceholder}
                   required
                 />
               </ToolFormField>
@@ -1115,7 +1165,7 @@ function ToolEditDialog({
               >
                 {TOOL_EDIT_TEXT.cancelButton}
               </Button>
-              <Button type="submit" disabled={isPending}>
+              <Button type="submit" isLoading={isPending}>
                 {TOOL_EDIT_TEXT.saveButton}
               </Button>
             </DialogFooter>
@@ -1175,11 +1225,13 @@ function ToolDeleteDialog({
   onOpenChange,
   startTransition,
 }: ToolDeleteDialogProps) {
+  const isCheckedOut = tool?.status === 'CHECKEDOUT';
+
   /**
    * Deletes the selected tool and updates local state on success.
    */
   function handleDelete() {
-    if (!tool) {
+    if (!tool || isCheckedOut) {
       return;
     }
 
@@ -1205,8 +1257,16 @@ function ToolDeleteDialog({
     <Dialog open={Boolean(tool)} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{TOOL_DELETE_TEXT.title}</DialogTitle>
-          <DialogDescription>{TOOL_DELETE_TEXT.description}</DialogDescription>
+          <DialogTitle>
+            {isCheckedOut
+              ? TOOL_DELETE_TEXT.checkedOutTitle
+              : TOOL_DELETE_TEXT.title}
+          </DialogTitle>
+          <DialogDescription>
+            {isCheckedOut
+              ? TOOL_DELETE_TEXT.checkedOutDescription
+              : TOOL_DELETE_TEXT.description}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button
@@ -1217,15 +1277,17 @@ function ToolDeleteDialog({
           >
             {TOOL_DELETE_TEXT.cancelButton}
           </Button>
-          <Button
-            type="button"
-            variant="danger"
-            disabled={isPending}
-            onClick={handleDelete}
-          >
-            <Trash2 data-icon="inline-start" />
-            {TOOL_DELETE_TEXT.confirmButton}
-          </Button>
+          {!isCheckedOut && (
+            <Button
+              type="button"
+              variant="danger"
+              disabled={isPending}
+              onClick={handleDelete}
+            >
+              <Trash2 data-icon="inline-start" />
+              {TOOL_DELETE_TEXT.confirmButton}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

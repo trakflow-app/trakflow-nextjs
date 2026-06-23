@@ -27,20 +27,20 @@ interface MaterialsAddModalProps {
 
 type AddMaterialFormData = {
   name: string;
-  projectId: string;
+  projectId: string | null;
   quantity: number;
   unitCost: number;
   lowStockThreshold: number;
 };
+
+const ORG_INVENTORY_PROJECT_VALUE = '__org_inventory__';
 
 const addMaterialSchema = z.object({
   name: z
     .string()
     .trim()
     .min(1, materialsAddModalLocales.validation.nameRequired),
-  projectId: z
-    .string()
-    .min(1, materialsAddModalLocales.validation.projectRequired),
+  projectId: z.string().nullable(),
   quantity: z.coerce
     .number()
     .min(0, materialsAddModalLocales.validation.quantityMinimum),
@@ -54,7 +54,7 @@ const addMaterialSchema = z.object({
 
 const INITIAL_FORM_DATA: AddMaterialFormData = {
   name: '',
-  projectId: '',
+  projectId: null,
   quantity: 0,
   unitCost: 0,
   lowStockThreshold: 0,
@@ -70,19 +70,35 @@ export function MaterialsAddModal({
   projects,
   onSubmitSuccess,
 }: MaterialsAddModalProps) {
-  const canCreateMaterial = Boolean(orgId) && projects.length > 0;
+  const canCreateMaterial = Boolean(orgId);
   const [formData, setFormData] =
     useState<AddMaterialFormData>(INITIAL_FORM_DATA);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const projectOptions: SelectOption[] = projects.map((project) => ({
-    label: project.name,
-    value: project.id,
-  }));
+  const projectOptions: SelectOption[] = [
+    {
+      label: materialsAddModalLocales.orgInventoryOption,
+      value: ORG_INVENTORY_PROJECT_VALUE,
+    },
+    ...projects.map((project) => ({
+      label: project.name,
+      value: project.id,
+    })),
+  ];
+
+  function handleOpenChange(open: boolean) {
+    if (!open && isSubmitting) {
+      return;
+    }
+
+    if (!open) {
+      onClose();
+    }
+  }
 
   const handleInputChange = (
     field: keyof AddMaterialFormData,
-    value: string | number,
+    value: string | number | null,
   ) => {
     setFormData((currentFormData) => ({
       ...currentFormData,
@@ -109,7 +125,7 @@ export function MaterialsAddModal({
       await createMaterialAction({
         orgId,
         name: validationResult.data.name,
-        projectId: validationResult.data.projectId || null,
+        projectId: validationResult.data.projectId,
         quantity: validationResult.data.quantity,
         unitCost: validationResult.data.unitCost,
         lowStockThreshold: validationResult.data.lowStockThreshold,
@@ -130,7 +146,7 @@ export function MaterialsAddModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{materialsAddModalLocales.title}</DialogTitle>
@@ -168,8 +184,13 @@ export function MaterialsAddModal({
               <SelectField
                 id="material-project"
                 options={projectOptions}
-                value={formData.projectId}
-                onChange={(value) => handleInputChange('projectId', value)}
+                value={formData.projectId ?? ORG_INVENTORY_PROJECT_VALUE}
+                onChange={(value) =>
+                  handleInputChange(
+                    'projectId',
+                    value === ORG_INVENTORY_PROJECT_VALUE ? null : value,
+                  )
+                }
                 placeholder={materialsAddModalLocales.projectPlaceholder}
                 disabled={isSubmitting}
                 className="w-full"
@@ -230,18 +251,14 @@ export function MaterialsAddModal({
             </div>
 
             <div className="flex justify-end">
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting
-                  ? materialsAddModalLocales.submittingButton
-                  : materialsAddModalLocales.submitButton}
+              <Button type="submit" isLoading={isSubmitting}>
+                {materialsAddModalLocales.submitButton}
               </Button>
             </div>
           </form>
         ) : (
           <div className="py-4 text-sm text-muted-foreground">
-            {orgId
-              ? materialsAddModalLocales.noProjectsAvailable
-              : materialsAddModalLocales.loadingOrg}
+            {materialsAddModalLocales.loadingOrg}
           </div>
         )}
       </DialogContent>

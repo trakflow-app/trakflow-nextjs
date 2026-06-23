@@ -526,6 +526,41 @@ export type Database = {
           },
         ]
       }
+      material_inventory_stats: {
+        Row: {
+          inventory_value: number | null
+          low_stock_count: number | null
+          org_id: string | null
+          total_materials: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tool_inventory_stats: {
+        Row: {
+          available_tools: number | null
+          checked_out_tools: number | null
+          org_id: string | null
+          service_tools: number | null
+          total_tools: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tools_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       can_manage_ops: { Args: never; Returns: boolean }
@@ -588,6 +623,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      try_parse_uuid: { Args: { value: string }; Returns: string }
       update_my_profile: { Args: { name: string }; Returns: undefined }
       verify_org_code: { Args: { join_code_input: string }; Returns: boolean }
     }

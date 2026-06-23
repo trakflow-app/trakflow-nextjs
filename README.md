@@ -9,6 +9,7 @@ This is a Next.js (full stack) app designed to help construction teams track too
 - [Required Software](#required-software)
 - [About the env file](#about-the-env-file)
 - [Connecting to Supabase](#connecting-to-the-supabase)
+- [Backend and Data Boundaries](#backend-and-data-boundaries)
 - [API Routes](#api-routes)
 - [Storage](#storage)
 - [Useful Commands](#useful-commands)
@@ -22,6 +23,7 @@ This app is designed to run locally for development. You’ll need Node.js and a
 ## Tech Stack Docs
 
 For the current stack overview and the project documentation map, see `docs/tech-stack.md`.
+For app-level rules around organizations, projects, materials, tools, and invites, see `docs/business-logic.md`.
 
 ## Required Software
 
@@ -95,6 +97,19 @@ See `docs/repo-bootstrap.md` for:
 - the local Supabase + Docker workflow for migration work
 - the shared hosted bootstrap script and test accounts
 - the local seed strategy
+
+## Backend and Data Boundaries
+
+TrakFlow uses Next.js Server Components, server actions, and Supabase as the backend. Keep backend code readable by preserving these boundaries:
+
+- `lib/dal/*` is the data access layer. Use it for focused database reads, safe row mapping, and reusable query helpers.
+- `app/services/*` owns business workflows. Use it for server actions, mutations, permission checks, cache invalidation, storage coordination, and Supabase RPC orchestration.
+- `supabase/migrations/*` owns schema, RLS, indexes, triggers, and database functions.
+- Supabase functions should be reserved for atomic, security-sensitive, or concurrency-sensitive workflows such as checkout, return, invite claiming, material usage logging, and generated counters.
+- Avoid putting UI behavior, page-specific copy, component state, or workflow decisions in DAL helpers or Supabase functions.
+- Add production database changes as new migrations. Do not edit old migrations after they may have been applied to a shared or hosted project.
+
+When optimizing data loading, remove request waterfalls first, then narrow selected columns, add focused indexes for real query paths, and verify the query plan in Supabase.
 
 ## API Routes
 

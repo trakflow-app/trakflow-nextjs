@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Table,
   TableHeader,
@@ -11,13 +11,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/numeric-formatting';
 import { Box, History, Edit2, AlertTriangle, CheckCircle2 } from 'lucide-react';
-import { MaterialUI } from '@/lib/dal/materials';
+import type { MaterialUI } from '@/lib/types/materials-types';
 import { materialsTable } from '@/locales/components/materials/materials-table-locales';
 
 type Props = {
   materials: MaterialUI[];
-  projectFilter: string | null;
-  searchTerm: string;
   onLogUsage: (id: string) => void;
   onEdit: (id: string) => void;
 };
@@ -28,45 +26,18 @@ type Props = {
 const getStatusLabel = (isLow: boolean) =>
   isLow ? materialsTable.lowStock : materialsTable.inStock;
 
+/**
+ * This component is showing a list of materials in a table format for desktop, and a card format for mobile. It accepts a list of materials and two callbacks for logging usage and editing materials. The status of each material is determined by comparing the current quantity to the minimum quantity, and appropriate styling and labels are applied.
+ */
 export default function MaterialsTable({
   materials,
-  projectFilter,
-  searchTerm,
   onLogUsage,
   onEdit,
 }: Props) {
-  /**
-   * Filter Logic: useMemo for large arrays
-   * First, we narrow down the materials based on the active project
-   * and the user's search query across name and project name.
-   */
-  const rows = useMemo(() => {
-    return materials.filter((material) => {
-      // If a project is selected, exclude materials that don't match
-      if (projectFilter && material.projectName !== projectFilter) return false;
+  const rows = materials;
 
-      // If search term exists, check for matches in material name or project name
-      if (searchTerm) {
-        const q = searchTerm.toLowerCase();
-        return (
-          material.name.toLowerCase().includes(q) ||
-          material.projectName.toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-  }, [materials, projectFilter, searchTerm]);
-
-  /**
-   * Row Transformation:
-   * Calculates derived values like total cost and inventory status.
-   * This is called inside your map() when rendering the table rows.
-   */
   const computeMaterialRow = (material: MaterialUI) => {
-    // Business Logic: Value calculation
     const totalValue = material.unitCost * material.quantity;
-
-    // Threshold Check: Determine if the item is running low
     const isLow = material.quantity <= material.minQuantity;
     const statusLabel = getStatusLabel(isLow);
 
@@ -75,7 +46,6 @@ export default function MaterialsTable({
 
   return (
     <div className="w-full">
-      {/* MOBILE VIEW: Hidden on large screens (md:hidden) */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {rows.map((material) => {
           const { totalValue, isLow, statusLabel } =
@@ -113,15 +83,21 @@ export default function MaterialsTable({
               <div className="grid grid-cols-2 gap-4 border-y border-border py-2">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Quantity
+                    {materialsTable.currentQuantityLabel}
                   </p>
                   <p className="text-sm font-semibold text-foreground">
-                    {material.quantity} {material.unit}
+                    {material.quantity}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    {materialsTable.minimumQuantityLabel}
+                  </p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {material.minQuantity}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Total Value
+                    {materialsTable.totalValueHeader}
                   </p>
                   <p className="text-sm font-semibold text-primary">
                     {formatCurrency(totalValue)}
@@ -134,14 +110,15 @@ export default function MaterialsTable({
                   onClick={() => onLogUsage(material.id)}
                   className="h-9 flex-1 gap-2"
                 >
-                  <History className="w-3 h-3" /> Log Usage
+                  <History className="w-3 h-3" />{' '}
+                  {materialsTable.logUsageAction}
                 </Button>
                 <Button
                   onClick={() => onEdit(material.id)}
                   variant="outline"
                   className="h-9 flex-1 gap-2"
                 >
-                  <Edit2 className="w-3 h-3" /> Edit
+                  <Edit2 className="w-3 h-3" /> {materialsTable.editAction}
                 </Button>
               </div>
             </div>
@@ -149,7 +126,6 @@ export default function MaterialsTable({
         })}
       </div>
 
-      {/* DESKTOP VIEW */}
       <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <Table className="min-w-full">
           <TableHeader className="bg-slate-50/50">
@@ -158,7 +134,7 @@ export default function MaterialsTable({
                 {materialsTable.materialHeader}
               </TableHead>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
-                {materialsTable.projectHeader}
+                {materialsTable.inventoryLocationHeader}
               </TableHead>
               <TableHead className="w-[10%] font-bold text-primary-600 px-4 py-3">
                 {materialsTable.quantityHeader}
@@ -195,9 +171,6 @@ export default function MaterialsTable({
                         <div className="font-bold text-slate-900 truncate">
                           {material.name}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-medium uppercase truncate">
-                          {material.unit}
-                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -209,7 +182,8 @@ export default function MaterialsTable({
                       {material.quantity}
                     </div>
                     <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-                      Min: {material.minQuantity}
+                      {materialsTable.minimumQuantityLabel}{' '}
+                      {material.minQuantity}
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 tabular-nums text-muted-foreground">
@@ -227,7 +201,6 @@ export default function MaterialsTable({
                           : 'border-success/10 bg-success/10 text-success'
                       }
                     >
-                      {/* Conditional Icon Rendering */}
                       {isLow ? (
                         <AlertTriangle className="w-3 h-3" />
                       ) : (

@@ -110,22 +110,15 @@ export async function claimInvite(token: string): Promise<string> {
  * Lists active foreman invites for the authenticated user's organization.
  * Used by the owner invite page so manual invite links stay visible until claimed.
  */
-export async function listPendingForemanInvites(): Promise<
-  PendingForemanInvite[]
-> {
+export async function listPendingForemanInvites(
+  orgId: string,
+): Promise<PendingForemanInvite[]> {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw createInvitesError(INVITES_ERROR_MESSAGES.authenticationRequired);
-  }
 
   const { data: invites, error } = await supabase
     .from('org_invites')
     .select('created_at, expires_at, invited_email, token')
+    .eq('org_id', orgId)
     .eq('role', FOREMAN_INVITE_ROLE)
     .is('used_at', null)
     .gt('expires_at', new Date().toISOString())

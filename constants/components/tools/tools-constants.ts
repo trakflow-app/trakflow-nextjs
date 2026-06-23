@@ -27,6 +27,14 @@ export const TOOLS_MANAGEMENT = {
     ALL: 'all',
     INVENTORY_PROJECT_VALUE: 'inventory',
   },
+  QUERY_PARAMS: {
+    page: 'page',
+    pageSize: 'pageSize',
+    project: 'project',
+    search: 'search',
+    status: 'status',
+    type: 'type',
+  },
   DEFAULTS: {
     FIRST_PAGE: 1,
     PAGE_SIZE: 6,
@@ -34,7 +42,6 @@ export const TOOLS_MANAGEMENT = {
     TOOL_CONDITION: 'GOOD' as ToolCondition,
   },
   LIMITS: {
-    MIN_TAG_NUMBER: 1,
     IMAGE_PLACEHOLDER_SIZE: 48,
   },
   IMAGE_SIZES: {
@@ -56,6 +63,7 @@ export const TOOLS_MANAGEMENT = {
     MEDIUM: 12,
     LARGE: 24,
   },
+  SEARCH_DEBOUNCE_MS: 300,
   PAGE_SUMMARY_TOKENS: {
     CURRENT_PAGE: '{currentPage}',
     TOTAL_PAGES: '{totalPages}',
@@ -63,7 +71,6 @@ export const TOOLS_MANAGEMENT = {
   FORM_KEYS: {
     id: 'id',
     name: 'name',
-    tagNumber: 'tagNumber',
     status: 'status',
     condition: 'condition',
     projectId: 'projectId',

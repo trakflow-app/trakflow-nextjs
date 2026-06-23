@@ -1,65 +1,136 @@
-import { createClient } from '@/lib/supabase/client';
-import { Database } from '@/lib/types/database.types';
+import 'server-only';
 
-// Define the UI type (what the component expects)
-export type MaterialUI = {
-  id: string;
-  name: string;
-  projectId: string | null;
-  projectName: string;
-  quantity: number;
-  minQuantity: number;
-  unitCost: number;
-  totalValue: number;
-  unit: string;
-};
+import { createClient } from '@/lib/supabase/server';
+import type { MaterialUI } from '@/lib/types/materials-types';
+import type { Database } from '@/lib/types/database.types';
+import { materialsTable } from '@/locales/components/materials/materials-table-locales';
+import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
 
-// Define the exact shape Supabase returns from the JOIN
+const MATERIALS_SELECT_COLUMNS = `
+  id,
+  project_id,
+  name,
+  unit_qty,
+  unit_cost,
+  low_stock_threshold,
+  projects (
+    project_name
+  )
+`;
+
+/**
+ * Material row shape returned by Supabase when joining project names.
+ */
 type MaterialWithProject = Database['public']['Tables']['materials']['Row'] & {
   projects: { project_name: string } | null;
 };
 
 /**
- * Fetches materials for a specific organization.
- * Uses the foreign key to 'projects' to get the project_name.
+ * Server-side filters supported by the materials list query.
  */
-export async function fetchMaterials(
-  orgId: string,
-  projectId?: string | null,
-): Promise<MaterialUI[]> {
-  const supabase = createClient();
+export type MaterialListFilters = {
+  page: number;
+  pageSize: number;
+  project: string;
+  search: string;
+};
 
+/**
+ * Paginated material rows returned to the materials page.
+ */
+export type MaterialListResult = {
+  materials: MaterialUI[];
+  totalCount: number;
+  totalPages: number;
+};
+
+/**
+ * Summary numbers displayed above the materials table.
+ */
+export type MaterialStats = {
+  inventoryValue: number;
+  lowStockCount: number;
+  totalMaterials: number;
+};
+
+/**
+ * Maps a database material row into the UI shape used by table and modals.
+ */
+function mapMaterialRow(material: MaterialWithProject): MaterialUI {
+  return {
+    id: material.id,
+    name: material.name,
+    projectId: material.project_id,
+    projectName:
+      material.projects?.project_name || materialsTable.orgInventoryLabel,
+    quantity: material.unit_qty,
+    minQuantity: material.low_stock_threshold,
+    unitCost: material.unit_cost,
+    totalValue: material.unit_qty * material.unit_cost,
+  };
+}
+
+/**
+ * Fetches a paginated materials page for an organization.
+ */
+export async function getServerMaterialsPage(
+  orgId: string,
+  filters: MaterialListFilters,
+): Promise<MaterialListResult> {
+  const supabase = await createClient();
+  const pageStartIndex = (filters.page - 1) * filters.pageSize;
+  const pageEndIndex = pageStartIndex + filters.pageSize - 1;
   let query = supabase
     .from('materials')
-    .select(
-      `
-      *,
-      projects (
-        project_name
-      )
-    `,
-    )
+    .select(MATERIALS_SELECT_COLUMNS, { count: 'exact' })
     .eq('org_id', orgId);
 
-  if (projectId) {
-    query = query.eq('project_id', projectId);
+  if (filters.project !== MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS) {
+    query = query.eq('project_id', filters.project);
   }
 
-  const { data, error } = await query;
+  if (filters.search) {
+    query = query.ilike('name', `%${filters.search}%`);
+  }
+
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range(pageStartIndex, pageEndIndex);
 
   if (error) throw error;
 
   const materialsData = data as unknown as MaterialWithProject[];
+  const totalCount = count ?? 0;
 
-  return (materialsData || []).map((m) => ({
-    id: m.id,
-    name: m.name,
-    projectId: m.project_id,
-    projectName: m.projects?.project_name || 'Unassigned',
-    quantity: m.unit_qty,
-    minQuantity: m.low_stock_threshold,
-    unitCost: m.unit_cost,
-    totalValue: m.unit_qty * m.unit_cost,
-    unit: 'units',
-  }));
+  return {
+    materials: (materialsData || []).map(mapMaterialRow),
+    totalCount,
+    totalPages: Math.max(1, Math.ceil(totalCount / filters.pageSize)),
+  };
+}
+
+/**
+ * Fetches material summary metrics without loading every row into the UI.
+ */
+export async function getServerMaterialStats(
+  orgId: string,
+): Promise<MaterialStats> {
+  // Create an authenticated server client so the view respects material RLS.
+  const supabase = await createClient();
+
+  // Read the single aggregate row for the current organization.
+  const { data, error } = await supabase
+    .from('material_inventory_stats')
+    .select('inventory_value, low_stock_count, total_materials')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  // Surface database or permission failures to the page error boundary.
+  if (error) throw error;
+
+  return {
+    inventoryValue: data?.inventory_value ?? 0,
+    lowStockCount: data?.low_stock_count ?? 0,
+    totalMaterials: data?.total_materials ?? 0,
+  };
 }

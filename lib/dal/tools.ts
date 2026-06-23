@@ -3,13 +3,48 @@ import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { Database } from '@/lib/types/database.types';
 import { TOOLS_PAGE_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
-import { createSignedToolImageUrl } from '@/lib/storage/tool-images';
+import { createSignedToolImageUrls } from '@/lib/storage/tool-images';
 
 export type ToolStatus = Database['public']['Enums']['tool_status'];
 export type ToolCondition = Database['public']['Enums']['tool_condition'];
 export type ToolAssignmentType = 'INVENTORY' | 'ASSIGNED';
 
+export type ToolListFilters = {
+  page: number;
+  pageSize: number;
+  project: string;
+  search: string;
+  status: string;
+  type: string;
+};
+
+export type ToolListResult = {
+  tools: ToolRow[];
+  totalCount: number;
+  totalPages: number;
+};
+
+export type ToolStats = {
+  availableTools: number;
+  checkedOutTools: number;
+  serviceTools: number;
+  totalTools: number;
+};
+
 const TOOL_PROJECT_SELECT_COLUMNS = 'id, project_name';
+const TOOLS_WITH_PROJECT_SELECT_COLUMNS = `
+  id,
+  name,
+  tag_number,
+  status,
+  condition,
+  project_id,
+  notes,
+  image_path,
+  projects (
+    project_name
+  )
+`;
 
 export type ToolRow = {
   id: string;
@@ -30,22 +65,27 @@ export type ToolProjectRow = {
   project_name: string;
 };
 
-type ToolWithProject = Database['public']['Tables']['tools']['Row'] & {
+type ToolWithProject = Pick<
+  Database['public']['Tables']['tools']['Row'],
+  | 'condition'
+  | 'id'
+  | 'image_path'
+  | 'name'
+  | 'notes'
+  | 'project_id'
+  | 'status'
+  | 'tag_number'
+> & {
   projects: { project_name: string } | null;
 };
 
 /**
- * Maps a tool database row to the UI shape with a signed image URL.
+ * Maps a tool database row to the UI shape.
  */
-async function mapToolRow(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+function mapToolRow(
   tool: ToolWithProject,
-): Promise<ToolRow> {
-  const signedImageUrl = await createSignedToolImageUrl(
-    supabase,
-    tool.image_path,
-  );
-
+  signedImageUrl: string | null,
+): ToolRow {
   return {
     id: tool.id,
     name: tool.name,
@@ -62,33 +102,69 @@ async function mapToolRow(
 }
 
 /**
- * Fetches all tools for an organization with optional project assignment data.
+ * Fetches a paginated tools page for an organization.
  */
-export async function getTools(orgId: string): Promise<ToolRow[]> {
+export async function getTools(
+  orgId: string,
+  filters: ToolListFilters,
+): Promise<ToolListResult> {
   const supabase = await createClient();
-
-  const { data, error } = await supabase
+  const pageStartIndex = (filters.page - 1) * filters.pageSize;
+  const pageEndIndex = pageStartIndex + filters.pageSize - 1;
+  let query = supabase
     .from('tools')
-    .select(
-      `
-      *,
-      projects (
-        project_name
-      )
-    `,
-    )
-    .eq('org_id', orgId)
-    .order('tag_number', { ascending: true });
+    .select(TOOLS_WITH_PROJECT_SELECT_COLUMNS, { count: 'exact' })
+    .eq('org_id', orgId);
+
+  if (filters.search) {
+    query = query.ilike('name', `%${filters.search}%`);
+  }
+
+  if (filters.status !== 'all') {
+    query = query.eq('status', filters.status as ToolStatus);
+  }
+
+  if (filters.project !== 'all') {
+    query =
+      filters.project === 'inventory'
+        ? query.is('project_id', null)
+        : query.eq('project_id', filters.project);
+  }
+
+  if (filters.type !== 'all') {
+    query =
+      filters.type === 'INVENTORY'
+        ? query.is('project_id', null)
+        : query.not('project_id', 'is', null);
+  }
+
+  const { data, error, count } = await query
+    .order('tag_number', { ascending: true })
+    .range(pageStartIndex, pageEndIndex);
 
   if (error) {
     throw new Error(TOOLS_PAGE_TEXT.loadFailed);
   }
 
   const toolsData = data as unknown as ToolWithProject[];
+  const imagePaths = toolsData
+    .map((tool) => tool.image_path)
+    .filter((imagePath): imagePath is string => Boolean(imagePath));
+  const signedImageUrls = await createSignedToolImageUrls(supabase, imagePaths);
 
-  return Promise.all(
-    (toolsData ?? []).map((tool) => mapToolRow(supabase, tool)),
+  const tools = (toolsData ?? []).map((tool) =>
+    mapToolRow(
+      tool,
+      tool.image_path ? (signedImageUrls.get(tool.image_path) ?? null) : null,
+    ),
   );
+  const totalCount = count ?? 0;
+
+  return {
+    tools,
+    totalCount,
+    totalPages: Math.max(1, Math.ceil(totalCount / filters.pageSize)),
+  };
 }
 
 /**
@@ -114,6 +190,8 @@ export async function getToolProjects(
 
 /**
  * Fetches a single tool by id, scoped to the caller's organization.
+ *
+ * Detail pages sign the image separately so text content can stream first.
  */
 export async function getToolById(
   id: string,
@@ -123,14 +201,7 @@ export async function getToolById(
 
   const { data, error } = await supabase
     .from('tools')
-    .select(
-      `
-      *,
-      projects (
-        project_name
-      )
-    `,
-    )
+    .select(TOOLS_WITH_PROJECT_SELECT_COLUMNS)
     .eq('id', id)
     .eq('org_id', orgId)
     .single();
@@ -140,5 +211,34 @@ export async function getToolById(
     throw new Error(TOOLS_PAGE_TEXT.loadFailed);
   }
 
-  return mapToolRow(supabase, data as unknown as ToolWithProject);
+  const tool = data as unknown as ToolWithProject;
+
+  return mapToolRow(tool, null);
+}
+
+/**
+ * Fetches summary counts for the tools inventory.
+ */
+export async function getToolStats(orgId: string): Promise<ToolStats> {
+  // Create an authenticated client so the aggregate view respects tool RLS.
+  const supabase = await createClient();
+
+  // Read all tool summary counts from one database aggregate row.
+  const { data, error } = await supabase
+    .from('tool_inventory_stats')
+    .select('available_tools, checked_out_tools, service_tools, total_tools')
+    .eq('org_id', orgId)
+    .maybeSingle();
+
+  // Surface database or permission failures to the page error boundary.
+  if (error) {
+    throw new Error(TOOLS_PAGE_TEXT.loadFailed);
+  }
+
+  return {
+    availableTools: data?.available_tools ?? 0,
+    checkedOutTools: data?.checked_out_tools ?? 0,
+    serviceTools: data?.service_tools ?? 0,
+    totalTools: data?.total_tools ?? 0,
+  };
 }

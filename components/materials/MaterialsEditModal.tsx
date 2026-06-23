@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { MaterialEditForm } from '@/components/materials/MaterialsEditForm';
-import { type MaterialUI } from '@/lib/dal/materials';
+import { type MaterialUI } from '@/lib/types/materials-types';
 import { EditMaterialFormInput } from '@/lib/validations/materials-validations';
 import { updateMaterialAction } from '@/app/services/materials-services';
 import { materialEditModalLocales } from '@/locales/components/materials/materials-edit-modal-locales';
@@ -42,6 +42,16 @@ export function MaterialEditModal({
       setIsSubmitting(false);
     }
   }, [isOpen]);
+
+  function handleOpenChange(open: boolean) {
+    if (!open && isSubmitting) {
+      return;
+    }
+
+    if (!open) {
+      onClose();
+    }
+  }
 
   /**
    * Handle form submission
@@ -81,7 +91,7 @@ export function MaterialEditModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{materialEditModalLocales.title}</DialogTitle>

@@ -1,269 +1,168 @@
-'use client';
-
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import StatsGrid from '@/components/materials/StatsGrid';
-import FilterBar from '@/components/materials/FilterBar';
-import MaterialsTable from '@/components/materials/MaterialsTable';
-import { fetchMaterials, type MaterialUI } from '@/lib/dal/materials';
-import { fetchProjectsForOrg, type ProjectOption } from '@/lib/dal/projects';
-import { createClient } from '@/lib/supabase/client';
-import { materialsPage } from '@/locales/app/(dashboard)/materials/materials-page-locales';
-import { MaterialUsageModal } from '@/components/materials/MaterialsUsageModal';
-import { MaterialEditModal } from '@/components/materials/MaterialsEditModal';
-import { MaterialsAddModal } from '@/components/materials/MaterialsAddModal';
+import { redirect } from 'next/navigation';
+import { MaterialsClient } from '@/components/materials/materials-client';
+import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
+import { requireOrgMember } from '@/lib/dal/auth';
+import {
+  getServerMaterialsPage,
+  getServerMaterialStats,
+  type MaterialListFilters,
+} from '@/lib/dal/materials';
+import { getProjectsForOrg } from '@/lib/dal/projects-server';
+import {
+  getAllowedNumber,
+  getPositiveInteger,
+  getSearchParamValue,
+  isUuid,
+} from '@/lib/query-params';
 
 /**
- * MaterialsPage Component
- * Manages the fetching, filtering, usage-material and editing materials.
+ * Search params accepted by the materials list page.
  */
-export default function MaterialsPage() {
-  /**
-   * State management
-   */
-  const [projectFilter, setProjectFilter] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [materials, setMaterials] = useState<MaterialUI[]>([]);
-  const [orgProjects, setOrgProjects] = useState<ProjectOption[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [orgId, setOrgId] = useState<string | null>(null);
+type MaterialsPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  // Modal state for material usage logging
-  const [usageModalOpen, setUsageModalOpen] = useState(false);
-  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(
-    null,
-  );
-
-  // Modal state for adding new material
-  const [addModalOpen, setAddModalOpen] = useState(false);
-
-  // Modal state for editing an existing material
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [selectedEditMaterialId, setSelectedEditMaterialId] = useState<
-    string | null
-  >(null);
-
-  /**
-   * Data fetching
-   */
-  const loadMaterials = useCallback(async () => {
-    const supabase = createClient();
-
-    // Retrieve the authenticated user session
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    // Fetch the organization ID linked to the user's account
-    const { data: account } = await supabase
-      .from('accounts')
-      .select('org_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!account?.org_id) {
-      setLoading(false);
-      return;
-    }
-
-    // API call to retrieve materials and projects for the specific organization
-    const [data, projectsData] = await Promise.all([
-      fetchMaterials(account.org_id),
-      fetchProjectsForOrg(account.org_id),
-    ]);
-    setMaterials(data);
-    setOrgProjects(projectsData);
-    setLoading(false);
-    setOrgId(account.org_id);
-  }, []);
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      void loadMaterials();
-    });
-  }, [loadMaterials]);
-
-  /**
-   * Extracts unique project names from the materials list for the FilterBar.
-   * Memoized to prevent recalculation on every re-render.
-   */
-  const projects = useMemo(
-    () => orgProjects.map((project) => project.name),
-    [orgProjects],
-  );
-
-  /**
-   * Gets the material currently selected for editing.
-   */
-  const selectedEditMaterial = useMemo(
-    () =>
-      selectedEditMaterialId
-        ? materials.find((material) => material.id === selectedEditMaterialId)
-        : null,
-    [materials, selectedEditMaterialId],
-  );
-
-  /**
-   * Opens the interface to record material consumption.
-   * @param id - The unique identifier of the material.
-   */
-  const handleLogUsage = (id: string) => {
-    setSelectedMaterialId(id);
-    setUsageModalOpen(true);
-  };
-
-  /**
-   * Closes the material usage logging modal.
-   */
-  const handleCloseUsageModal = () => {
-    setUsageModalOpen(false);
-    setSelectedMaterialId(null);
-  };
-
-  /**
-   * Callback when material usage is successfully logged.
-   * Updates the local state to reflect the deduction immediately.
-   */
-  const handleUsageSubmitSuccess = (data: {
-    materialId: string;
-    projectId: string;
-    quantityUsed: number;
-    notes?: string | null | undefined;
-  }) => {
-    if (!selectedMaterialId) return;
-
-    console.log('Deducting from ID:', data.materialId);
-    console.log(
-      'Current Materials IDs:',
-      materials.map((m) => m.id),
-    );
-
-    setMaterials((prevMaterials) =>
-      prevMaterials.map((material) => {
-        if (material.id === data.materialId) {
-          const newQuantity = Math.max(
-            0,
-            material.quantity - data.quantityUsed,
-          );
-          return {
-            ...material,
-            quantity: newQuantity,
-            // Recalculate total value so stats grid stays accurate
-            totalValue: newQuantity * material.unitCost,
-          };
-        }
-        return material;
-      }),
-    );
-  };
-
-  /**
-   * Opens the material editor.
-   * @param id - The unique identifier of the material.
-   */
-  const handleEdit = (id: string) => {
-    setSelectedEditMaterialId(id);
-    setEditModalOpen(true);
-  };
-
-  /**
-   * Closes the material editor.
-   */
-  const handleCloseEditModal = () => {
-    setEditModalOpen(false);
-    setSelectedEditMaterialId(null);
-  };
-
-  /**
-   * Callback when material details are successfully updated.
-   */
-  const handleEditSubmitSuccess = (updatedMaterial: MaterialUI) => {
-    setMaterials((prevMaterials) =>
-      prevMaterials.map((material) =>
-        material.id === updatedMaterial.id ? updatedMaterial : material,
+/**
+ * Converts URL search params into the DAL filter contract.
+ */
+function getMaterialFilters(
+  searchParams: Record<string, string | string[] | undefined>,
+): MaterialListFilters {
+  return {
+    page: getPositiveInteger(
+      getSearchParamValue(searchParams, MATERIALS_MANAGEMENT.QUERY_PARAMS.page),
+      MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+    ),
+    pageSize: getAllowedNumber(
+      getSearchParamValue(
+        searchParams,
+        MATERIALS_MANAGEMENT.QUERY_PARAMS.pageSize,
       ),
-    );
+      Object.values(MATERIALS_MANAGEMENT.PAGE_SIZES),
+      MATERIALS_MANAGEMENT.DEFAULTS.PAGE_SIZE,
+    ),
+    project:
+      getSearchParamValue(
+        searchParams,
+        MATERIALS_MANAGEMENT.QUERY_PARAMS.project,
+      ) ?? MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS,
+    search:
+      getSearchParamValue(
+        searchParams,
+        MATERIALS_MANAGEMENT.QUERY_PARAMS.search,
+      ) ?? '',
   };
+}
 
-  /**
-   * Opens the add material modal.
-   */
-  const handleAddMaterial = () => {
-    setAddModalOpen(true);
-  };
+/**
+ * Checks whether the project filter is the all-projects sentinel or an organization project.
+ */
+function isValidMaterialProjectFilter(
+  projectFilter: string,
+  projects: readonly { id: string }[],
+): boolean {
+  if (projectFilter === MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS) {
+    return true;
+  }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {materialsPage.materialsManagementTitle}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {materialsPage.materialsManagementSubtitle}
-          </p>
-        </div>
+    isUuid(projectFilter) &&
+    projects.some((project) => project.id === projectFilter)
+  );
+}
 
-        <div>
-          <Button onClick={handleAddMaterial}>
-            <Plus className="mr-2 h-4 w-4" /> {materialsPage.addMaterialButton}
-          </Button>
-        </div>
-      </div>
+/**
+ * Builds a canonical materials list URL from validated filters.
+ */
+function getMaterialsListPath(filters: MaterialListFilters): string {
+  // Start with an empty query and add only non-default filters.
+  const params = new URLSearchParams();
 
-      <div className="space-y-6">
-        <StatsGrid materials={materials} />
+  // Preserve the current search text.
+  if (filters.search) {
+    params.set(MATERIALS_MANAGEMENT.QUERY_PARAMS.search, filters.search);
+  }
 
-        <div className="flex items-center justify-between">
-          <FilterBar
-            projects={projects}
-            projectFilter={projectFilter}
-            onProjectChange={setProjectFilter}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-          />
-        </div>
+  // Preserve a non-default project filter.
+  if (filters.project !== MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS) {
+    params.set(MATERIALS_MANAGEMENT.QUERY_PARAMS.project, filters.project);
+  }
 
-        {!loading && (
-          <MaterialsTable
-            materials={materials}
-            projectFilter={projectFilter}
-            searchTerm={searchTerm}
-            onLogUsage={handleLogUsage}
-            onEdit={handleEdit}
-          />
-        )}
-      </div>
+  // Omit page one to keep the canonical URL short.
+  if (filters.page !== MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE) {
+    params.set(MATERIALS_MANAGEMENT.QUERY_PARAMS.page, String(filters.page));
+  }
 
-      {/* Material Usage Logging Modal */}
-      <MaterialUsageModal
-        isOpen={usageModalOpen}
-        onClose={handleCloseUsageModal}
-        materialId={selectedMaterialId}
-        materials={materials}
-        onSubmitSuccess={handleUsageSubmitSuccess}
-      />
-      {/* Material Add Modal */}
-      <MaterialsAddModal
-        isOpen={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        orgId={orgId}
-        projects={orgProjects}
-        onSubmitSuccess={loadMaterials}
-      />
-      {/* Material Edit Modal */}
-      <MaterialEditModal
-        isOpen={editModalOpen}
-        onClose={handleCloseEditModal}
-        material={selectedEditMaterial ?? null}
-        onSubmitSuccess={handleEditSubmitSuccess}
-      />
-    </div>
+  // Omit the default page size to keep the canonical URL short.
+  if (filters.pageSize !== MATERIALS_MANAGEMENT.DEFAULTS.PAGE_SIZE) {
+    params.set(
+      MATERIALS_MANAGEMENT.QUERY_PARAMS.pageSize,
+      String(filters.pageSize),
+    );
+  }
+
+  // Convert the validated filters into the final URL.
+  const queryString = params.toString();
+
+  return queryString
+    ? `${MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH}?${queryString}`
+    : MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH;
+}
+
+/**
+ * Materials management page with server-loaded inventory and project data.
+ */
+export default async function MaterialsPage({
+  searchParams,
+}: MaterialsPageProps) {
+  // Resolve and validate the incoming URL filters.
+  const resolvedSearchParams = await searchParams;
+
+  // Load the authenticated organization before querying inventory.
+  const { account } = await requireOrgMember();
+  const orgId = account.org_id as string;
+  const filters = getMaterialFilters(resolvedSearchParams);
+
+  // Start independent project and summary reads together.
+  const projectsPromise = getProjectsForOrg(orgId);
+  const materialStatsPromise = getServerMaterialStats(orgId);
+  const projects = await projectsPromise;
+
+  // Reject malformed or cross-organization project filters before querying materials.
+  if (!isValidMaterialProjectFilter(filters.project, projects)) {
+    redirect(
+      getMaterialsListPath({
+        ...filters,
+        page: MATERIALS_MANAGEMENT.DEFAULTS.FIRST_PAGE,
+        project: MATERIALS_MANAGEMENT.FILTERS.ALL_PROJECTS,
+      }),
+    );
+  }
+
+  // Load project-filtered rows after validating project ownership.
+  const [materialsResult, materialStats] = await Promise.all([
+    getServerMaterialsPage(orgId, filters),
+    materialStatsPromise,
+  ]);
+
+  // Redirect invalid high page numbers to the final available page.
+  if (filters.page > materialsResult.totalPages) {
+    redirect(
+      getMaterialsListPath({
+        ...filters,
+        page: materialsResult.totalPages,
+      }),
+    );
+  }
+
+  return (
+    <MaterialsClient
+      filters={filters}
+      initialMaterials={materialsResult.materials}
+      materialStats={materialStats}
+      orgProjects={projects}
+      orgId={orgId}
+      totalPages={materialsResult.totalPages}
+    />
   );
 }

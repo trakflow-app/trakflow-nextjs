@@ -57,8 +57,6 @@ export const TOOL_EDIT_TEXT = {
   description: 'Update the tool details and project assignment.',
   nameLabel: 'Name',
   namePlaceholder: 'Example: Cordless drill',
-  tagNumberLabel: 'Tag number',
-  tagNumberPlaceholder: 'Example: 1042',
   projectLabel: 'Project',
   imageAttachmentLabel: 'Image attachment',
   imageAttachmentButton: 'Replace photo',
@@ -76,8 +74,6 @@ export const TOOL_CREATE_TEXT = {
   description: 'Create a tool record and assign it to inventory or a project.',
   nameLabel: 'Name',
   namePlaceholder: 'Example: Cordless drill',
-  tagNumberLabel: 'Tag number',
-  tagNumberPlaceholder: 'Example: 1042',
   projectLabel: 'Project',
   imageAttachmentLabel: 'Image attachment',
   imageAttachmentButton: 'Upload photo',
@@ -94,6 +90,9 @@ export const TOOL_DELETE_TEXT = {
   title: 'Delete Tool',
   description:
     'This permanently removes the tool record from your organization.',
+  checkedOutTitle: 'Tool must be checked in first',
+  checkedOutDescription:
+    'This tool is currently checked out. Check it in before deleting the tool record.',
   confirmButton: 'Delete tool',
   cancelButton: 'Cancel',
 };
@@ -145,6 +144,7 @@ export const TOOLS_ACTION_TEXT = {
   updateFailed: 'Failed to update tool.',
   updateSuccess: 'Tool updated.',
   deleteFailed: 'Failed to delete tool.',
+  deleteCheckedOut: 'Check in this tool before deleting it.',
   deleteSuccess: 'Tool deleted.',
   checkoutFailed: 'Failed to check out tool.',
   checkoutSuccess: 'Tool checked out.',

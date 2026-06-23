@@ -1,234 +1,208 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { FolderOpen, Plus } from 'lucide-react';
+import { ProjectCard } from '@/components/projects/project-card';
 import {
-  Plus,
-  Edit2,
-  Trash2,
-  Calendar,
-  DollarSign,
-  Building2,
-  Eye,
-  FolderOpen,
-} from 'lucide-react';
+  ProjectFormDialog,
+  type ProjectDialogMode,
+} from '@/components/projects/project-form-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SearchFilter } from '@/components/ui/search-filter';
-import { type SelectOption } from '@/components/ui/select-field';
-import { ProjectStatusBadge } from '@/components/projects/project-status-badge';
+import {
+  PROJECT_FILTER_OPTIONS,
+  PROJECTS_MANAGEMENT,
+} from '@/constants/components/projects/projects-constants';
+import {
+  PROJECTS_ACTION_TEXT,
+  PROJECTS_LIST_TEXT,
+  PROJECTS_PAGE_TEXT,
+} from '@/locales/app/(dashboard)/projects/projects-page-locales';
 import type { ProjectRow } from '@/lib/dal/projects';
 import type { Database } from '@/lib/types/database.types';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 type ProjectStatus = Database['public']['Enums']['project_status'];
 type FilterValue = 'all' | ProjectStatus;
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const FILTER_ALL = 'all';
-
-const NEW_PROJECT_BUTTON = 'New Project';
-const SEARCH_PLACEHOLDER = 'Search projects...';
-const FILTER_PLACEHOLDER = 'Filter by status';
-const VIEW_BUTTON = 'View';
-const EDIT_BUTTON = 'Edit';
-const DELETE_BUTTON = 'Delete';
-const BUDGET_LABEL = 'Budget:';
-const EMPTY_TITLE = 'No projects found';
-const EMPTY_DESCRIPTION =
-  'No projects match your current filters. Try adjusting your search or create a new project.';
-const EMPTY_ACTION = 'Create Project';
-const NO_BUDGET = 'No budget set';
-const NO_END_DATE = 'Ongoing';
-
-const STATUS_LABELS: Record<ProjectStatus, string> = {
-  ACTIVE: 'Active',
-  COMPLETED: 'Completed',
+type ProjectsListProps = {
+  canManageProjects: boolean;
+  projects: ProjectRow[];
 };
 
-const FILTER_OPTIONS: SelectOption[] = [
-  { label: 'All', value: FILTER_ALL },
-  { label: 'Active', value: 'ACTIVE' },
-  { label: 'Completed', value: 'COMPLETED' },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatBudget(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-// ─── ProjectCard ──────────────────────────────────────────────────────────────
-
-interface ProjectCardProps {
-  project: ProjectRow;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}
+/**
+ * Optimistic project rows tied to the server snapshot they extend.
+ */
+type ProjectOptimisticState = {
+  rows: ProjectRow[];
+  serverProjects: ProjectRow[];
+};
 
 /**
- * Card displaying a single project's key info and action buttons.
+ * Renders the projects workspace.
+ *
+ * Managers can create and edit projects; crew can only view them.
  */
-function ProjectCard({ project, onView, onEdit, onDelete }: ProjectCardProps) {
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center justify-center rounded-lg bg-muted p-2">
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <ProjectStatusBadge
-            status={project.status}
-            label={STATUS_LABELS[project.status]}
-          />
-        </div>
-        <CardTitle className="text-base">{project.project_name}</CardTitle>
-      </CardHeader>
-
-      <CardContent className="flex flex-col gap-3 pb-4">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4 shrink-0" />
-          <span>
-            {formatDate(project.start_date)} –{' '}
-            {project.end_date ? formatDate(project.end_date) : NO_END_DATE}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <DollarSign className="h-4 w-4 shrink-0" />
-          <span>
-            {BUDGET_LABEL}{' '}
-            <span className="font-semibold text-foreground">
-              {project.budget_amount
-                ? formatBudget(project.budget_amount)
-                : NO_BUDGET}
-            </span>
-          </span>
-        </div>
-      </CardContent>
-
-      <CardFooter className="flex gap-2 border-t pt-4">
-        <Button variant="ghost" size="sm" className="flex-1" onClick={onView}>
-          <Eye />
-          {VIEW_BUTTON}
-        </Button>
-        <Button variant="ghost" size="sm" className="flex-1" onClick={onEdit}>
-          <Edit2 />
-          {EDIT_BUTTON}
-        </Button>
-        <Button
-          variant="danger"
-          size="sm"
-          className="flex-1"
-          onClick={onDelete}
-        >
-          <Trash2 />
-          {DELETE_BUTTON}
-        </Button>
-      </CardFooter>
-    </Card>
-  );
-}
-
-// ─── ProjectsList ─────────────────────────────────────────────────────────────
-
-interface ProjectsListProps {
-  projects: ProjectRow[];
-}
-
-/**
- * Client component — owns search, filter, and card navigation for the projects list.
- * Receives real project data from the parent Server Component page.
- */
-export function ProjectsList({ projects }: ProjectsListProps) {
+export function ProjectsList({
+  canManageProjects,
+  projects,
+}: ProjectsListProps) {
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<FilterValue>(FILTER_ALL);
+  const [statusFilter, setStatusFilter] = useState<FilterValue>(
+    PROJECTS_MANAGEMENT.FILTERS.ALL,
+  );
+  const [optimisticState, setOptimisticState] =
+    useState<ProjectOptimisticState>({
+      rows: projects,
+      serverProjects: projects,
+    });
+  const [dialogMode, setDialogMode] = useState<ProjectDialogMode>('create');
+  const [projectToEdit, setProjectToEdit] = useState<ProjectRow | null>(null);
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
+  const projectRows =
+    optimisticState.serverProjects === projects
+      ? optimisticState.rows
+      : projects;
 
-  const filtered = projects.filter((project) => {
-    const matchesSearch = project.project_name
-      .toLowerCase()
-      .includes(search.toLowerCase());
-    const matchesStatus =
-      statusFilter === FILTER_ALL || project.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // The page loads all current projects, so search/status filtering is local.
+  const filteredProjects = useMemo(
+    () =>
+      projectRows.filter((project) => {
+        const matchesSearch = project.project_name
+          .toLowerCase()
+          .includes(search.toLowerCase());
+        const matchesStatus =
+          statusFilter === PROJECTS_MANAGEMENT.FILTERS.ALL ||
+          project.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+      }),
+    [projectRows, search, statusFilter],
+  );
+
+  function openCreateDialog() {
+    setDialogMode('create');
+    setProjectToEdit(null);
+    setIsProjectDialogOpen(true);
+  }
+
+  function openEditDialog(project: ProjectRow) {
+    setDialogMode('edit');
+    setProjectToEdit(project);
+    setIsProjectDialogOpen(true);
+  }
+
+  function handleProjectCreated(project: ProjectRow) {
+    // Show the created project immediately, then refresh server data.
+    setOptimisticState((currentState) => ({
+      rows: [
+        project,
+        ...(currentState.serverProjects === projects
+          ? currentState.rows
+          : projects),
+      ],
+      serverProjects: projects,
+    }));
+    router.refresh();
+  }
+
+  function handleProjectUpdated(updatedProject: ProjectRow) {
+    // Replace the edited row immediately, then refresh server data.
+    setOptimisticState((currentState) => ({
+      rows: (currentState.serverProjects === projects
+        ? currentState.rows
+        : projects
+      ).map((project) =>
+        project.id === updatedProject.id ? updatedProject : project,
+      ),
+      serverProjects: projects,
+    }));
+    router.refresh();
+  }
 
   return (
-    <div>
-      {/* Search + filter */}
-      <div className="mb-6">
-        <SearchFilter
-          searchValue={search}
-          onSearchChange={setSearch}
-          searchPlaceholder={SEARCH_PLACEHOLDER}
-          filterOptions={FILTER_OPTIONS}
-          filterValue={statusFilter}
-          onFilterChange={(value: string) =>
-            setStatusFilter(value as FilterValue)
-          }
-          filterPlaceholder={FILTER_PLACEHOLDER}
-        />
-      </div>
-
-      {/* Grid or empty state */}
-      {filtered.length === 0 ? (
-        <EmptyState
-          icon={FolderOpen}
-          title={EMPTY_TITLE}
-          description={EMPTY_DESCRIPTION}
-          actionText={EMPTY_ACTION}
-          onActionClick={() => {
-            // TODO: open create project modal
-          }}
-        />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((project) => (
-            <ProjectCard
-              key={project.id}
-              project={project}
-              onView={() => router.push(`/projects/${project.id}`)}
-              onEdit={() => {
-                // TODO: open edit modal
-              }}
-              onDelete={() => {
-                // TODO: open delete confirmation
-              }}
-            />
-          ))}
+    <div className="min-h-screen bg-background px-6 py-8">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              {PROJECTS_PAGE_TEXT.title}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {PROJECTS_PAGE_TEXT.description}
+            </p>
+            {!canManageProjects && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {PROJECTS_ACTION_TEXT.managementOnly}
+              </p>
+            )}
+          </div>
+          {canManageProjects && (
+            <Button onClick={openCreateDialog}>
+              <Plus />
+              {PROJECTS_ACTION_TEXT.newProjectButton}
+            </Button>
+          )}
         </div>
-      )}
 
-      {/* New project button — floated to top in the page header */}
-      <div className="fixed bottom-6 right-6 md:hidden">
-        <Button size="sm">
-          <Plus />
-          {NEW_PROJECT_BUTTON}
-        </Button>
+        <div className="mb-6">
+          <SearchFilter
+            searchValue={search}
+            onSearchChange={setSearch}
+            searchPlaceholder={PROJECTS_LIST_TEXT.searchPlaceholder}
+            filterOptions={PROJECT_FILTER_OPTIONS}
+            filterValue={statusFilter}
+            onFilterChange={(value: string) =>
+              setStatusFilter(value as FilterValue)
+            }
+            filterPlaceholder={PROJECTS_LIST_TEXT.filterPlaceholder}
+          />
+        </div>
+
+        {filteredProjects.length === 0 ? (
+          <EmptyState
+            icon={FolderOpen}
+            title={PROJECTS_LIST_TEXT.emptyTitle}
+            description={PROJECTS_LIST_TEXT.emptyDescription}
+            actionText={
+              canManageProjects ? PROJECTS_LIST_TEXT.emptyAction : undefined
+            }
+            onActionClick={canManageProjects ? openCreateDialog : undefined}
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                canManageProjects={canManageProjects}
+                project={project}
+                onView={() => router.push(`/projects/${project.id}`)}
+                onEdit={() => openEditDialog(project)}
+              />
+            ))}
+          </div>
+        )}
+
+        {canManageProjects && (
+          <div className="fixed bottom-6 right-6 md:hidden">
+            <Button size="sm" onClick={openCreateDialog}>
+              <Plus />
+              {PROJECTS_ACTION_TEXT.newProjectButton}
+            </Button>
+          </div>
+        )}
       </div>
+
+      <ProjectFormDialog
+        mode={dialogMode}
+        onClose={() => setIsProjectDialogOpen(false)}
+        onProjectCreated={handleProjectCreated}
+        onProjectUpdated={handleProjectUpdated}
+        open={isProjectDialogOpen}
+        project={projectToEdit}
+      />
     </div>
   );
 }

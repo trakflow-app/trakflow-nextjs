@@ -1,43 +1,24 @@
-import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { ProjectsList } from '@/components/projects/projects-list';
 import { requireOrgMember } from '@/lib/dal/auth';
 import { getServerProjects } from '@/lib/dal/projects-server';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const PAGE_TITLE = 'Projects';
-const PAGE_DESCRIPTION = 'Manage your construction projects';
-const NEW_PROJECT_BUTTON = 'New Project';
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+import { PROJECTS_MANAGEMENT } from '@/constants/components/projects/projects-constants';
 
 /**
  * Projects list page — fetches all org projects server-side and passes them
  * to the ProjectsList client component for search, filter, and navigation.
  */
 export default async function ProjectsPage() {
+  // Server-side data fetching ensures only org members can access this page,
   const { account } = await requireOrgMember();
+  // and that they see the most up-to-date list of projects without client-side loading states.
   const projects = await getServerProjects(account.org_id as string);
+  // Determine if user can manage projects based on their role, and pass this as a prop for conditional UI in ProjectsList.
+  const canManageProjects = PROJECTS_MANAGEMENT.MANAGER_ROLES.includes(
+    account.role as (typeof PROJECTS_MANAGEMENT.MANAGER_ROLES)[number],
+  );
 
+  // Render the ProjectsList component with the fetched projects and permissions.
   return (
-    <div className="min-h-screen bg-background px-6 py-8">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{PAGE_TITLE}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {PAGE_DESCRIPTION}
-            </p>
-          </div>
-          <Button>
-            <Plus />
-            {NEW_PROJECT_BUTTON}
-          </Button>
-        </div>
-
-        <ProjectsList projects={projects} />
-      </div>
-    </div>
+    <ProjectsList canManageProjects={canManageProjects} projects={projects} />
   );
 }
