@@ -41,6 +41,7 @@ export function ProjectHeader({
   project,
 }: ProjectHeaderProps) {
   const router = useRouter();
+  const canViewBudget = canManageProjects;
   const [currentProject, setCurrentProject] = useState(project);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
@@ -103,17 +104,19 @@ export function ProjectHeader({
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <DollarSign className="h-4 w-4 shrink-0" />
-            <span>
-              {header.budgetLabel}:{' '}
-              <span className="font-medium text-foreground">
-                {currentProject.budget_amount
-                  ? formatBudget(currentProject.budget_amount)
-                  : header.noBudget}
+          {canViewBudget && (
+            <div className="flex items-center gap-1.5">
+              <DollarSign className="h-4 w-4 shrink-0" />
+              <span>
+                {header.budgetLabel}:{' '}
+                <span className="font-medium text-foreground">
+                  {currentProject.budget_amount
+                    ? formatBudget(currentProject.budget_amount)
+                    : header.noBudget}
+                </span>
               </span>
-            </span>
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

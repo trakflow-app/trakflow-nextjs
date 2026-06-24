@@ -46,6 +46,8 @@ export function ProjectCard({
   onView,
   project,
 }: ProjectCardProps) {
+  const canViewBudget = canManageProjects;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -72,17 +74,19 @@ export function ProjectCard({
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <DollarSign className="h-4 w-4 shrink-0" />
-          <span>
-            {PROJECTS_ACTION_TEXT.budgetLabel}{' '}
-            <span className="font-semibold text-foreground">
-              {project.budget_amount
-                ? formatBudget(project.budget_amount)
-                : PROJECTS_ACTION_TEXT.noBudget}
+        {canViewBudget && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <DollarSign className="h-4 w-4 shrink-0" />
+            <span>
+              {PROJECTS_ACTION_TEXT.budgetLabel}{' '}
+              <span className="font-semibold text-foreground">
+                {project.budget_amount
+                  ? formatBudget(project.budget_amount)
+                  : PROJECTS_ACTION_TEXT.noBudget}
+              </span>
             </span>
-          </span>
-        </div>
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="flex gap-2 border-t pt-4">
