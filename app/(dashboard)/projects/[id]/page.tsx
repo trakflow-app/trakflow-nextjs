@@ -78,7 +78,11 @@ export default async function ProjectDetailPage({
   const canManageProjects = PROJECTS_MANAGEMENT.MANAGER_ROLES.includes(
     account.role as (typeof PROJECTS_MANAGEMENT.MANAGER_ROLES)[number],
   );
-  const project = await getServerProjectById(id, orgId);
+  const project = canManageProjects
+    ? await getServerProjectById(id, orgId, {
+        includeBudget: true,
+      })
+    : await getServerProjectById(id, orgId);
 
   if (!project) notFound();
 
