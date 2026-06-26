@@ -18,6 +18,40 @@ export type ProjectOption = {
 export type ProjectRow = Database['public']['Tables']['projects']['Row'];
 
 /**
+ * Project fields that can cross server/client boundaries for every org member.
+ */
+export type ProjectCrewRow = Pick<
+  ProjectRow,
+  | 'created_at'
+  | 'end_date'
+  | 'id'
+  | 'org_id'
+  | 'project_name'
+  | 'start_date'
+  | 'status'
+>;
+
+/**
+ * Project fields that can cross server/client boundaries for project managers.
+ */
+export type ProjectManagerRow = ProjectCrewRow &
+  Pick<ProjectRow, 'budget_amount'>;
+
+/**
+ * Project fields rendered by client project surfaces.
+ */
+export type ProjectClientRow = ProjectCrewRow | ProjectManagerRow;
+
+/**
+ * Checks whether a client project row includes manager-only budget fields.
+ */
+export function hasProjectBudget(
+  project: ProjectClientRow,
+): project is ProjectManagerRow {
+  return 'budget_amount' in project;
+}
+
+/**
  * Tool fields rendered by the project detail tools section.
  */
 export type ProjectDetailTool = Pick<
