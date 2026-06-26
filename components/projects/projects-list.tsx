@@ -63,8 +63,9 @@ export function ProjectsList({
       serverProjects: projects,
     });
   const [dialogMode, setDialogMode] = useState<ProjectDialogMode>('create');
-  const [projectToEdit, setProjectToEdit] =
-    useState<ProjectManagerRow | null>(null);
+  const [projectToEdit, setProjectToEdit] = useState<ProjectManagerRow | null>(
+    null,
+  );
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const projectRows =
     optimisticState.serverProjects === projects

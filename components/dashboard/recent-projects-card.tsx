@@ -64,7 +64,9 @@ function getProjectProgressPercent(
 /**
  * Derives a display status from project status and end date.
  */
-function getProjectDisplayStatus(project: ProjectCrewRow): ProjectDisplayStatus {
+function getProjectDisplayStatus(
+  project: ProjectCrewRow,
+): ProjectDisplayStatus {
   if (project.status === 'COMPLETED') {
     return 'completed';
   }
