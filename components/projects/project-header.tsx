@@ -8,7 +8,11 @@ import { ProjectFormDialog } from '@/components/projects/project-form-dialog';
 import { Button } from '@/components/ui/button';
 import { ProjectStatusBadge } from '@/components/projects/project-status-badge';
 import { PROJECT_DETAIL_MESSAGES } from '@/locales/app/(dashboard)/projects/[id]/page-locales';
-import type { ProjectRow } from '@/lib/dal/projects';
+import {
+  hasProjectBudget,
+  type ProjectClientRow,
+  type ProjectManagerRow,
+} from '@/lib/dal/projects';
 
 const { header } = PROJECT_DETAIL_MESSAGES;
 
@@ -30,7 +34,7 @@ function formatDate(dateStr: string): string {
 
 interface ProjectHeaderProps {
   canManageProjects: boolean;
-  project: ProjectRow;
+  project: ProjectClientRow;
 }
 
 /**
@@ -41,11 +45,14 @@ export function ProjectHeader({
   project,
 }: ProjectHeaderProps) {
   const router = useRouter();
-  const canViewBudget = canManageProjects;
   const [currentProject, setCurrentProject] = useState(project);
+  const managerProject = hasProjectBudget(currentProject)
+    ? currentProject
+    : null;
+  const canViewBudget = canManageProjects && managerProject;
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  function handleProjectUpdated(updatedProject: ProjectRow) {
+  function handleProjectUpdated(updatedProject: ProjectManagerRow) {
     // Update the visible header immediately, then refresh server-rendered sections.
     setCurrentProject(updatedProject);
     router.refresh();
@@ -110,8 +117,8 @@ export function ProjectHeader({
               <span>
                 {header.budgetLabel}:{' '}
                 <span className="font-medium text-foreground">
-                  {currentProject.budget_amount
-                    ? formatBudget(currentProject.budget_amount)
+                  {managerProject.budget_amount
+                    ? formatBudget(managerProject.budget_amount)
                     : header.noBudget}
                 </span>
               </span>
@@ -120,14 +127,16 @@ export function ProjectHeader({
         </div>
       </div>
 
-      <ProjectFormDialog
-        mode="edit"
-        onClose={() => setIsEditDialogOpen(false)}
-        onProjectCreated={() => undefined}
-        onProjectUpdated={handleProjectUpdated}
-        open={isEditDialogOpen}
-        project={currentProject}
-      />
+      {canManageProjects && managerProject && (
+        <ProjectFormDialog
+          mode="edit"
+          onClose={() => setIsEditDialogOpen(false)}
+          onProjectCreated={() => undefined}
+          onProjectUpdated={handleProjectUpdated}
+          open={isEditDialogOpen}
+          project={managerProject}
+        />
+      )}
     </>
   );
 }

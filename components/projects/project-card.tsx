@@ -12,13 +12,16 @@ import {
 import { ProjectStatusBadge } from '@/components/projects/project-status-badge';
 import { PROJECT_STATUS_LABELS } from '@/constants/components/projects/projects-constants';
 import { PROJECTS_ACTION_TEXT } from '@/locales/app/(dashboard)/projects/projects-page-locales';
-import type { ProjectRow } from '@/lib/dal/projects';
+import {
+  hasProjectBudget,
+  type ProjectClientRow,
+} from '@/lib/dal/projects';
 
 type ProjectCardProps = {
   canManageProjects: boolean;
   onEdit: () => void;
   onView: () => void;
-  project: ProjectRow;
+  project: ProjectClientRow;
 };
 
 function formatBudget(amount: number): string {
@@ -46,7 +49,7 @@ export function ProjectCard({
   onView,
   project,
 }: ProjectCardProps) {
-  const canViewBudget = canManageProjects;
+  const canViewBudget = canManageProjects && hasProjectBudget(project);
 
   return (
     <Card>

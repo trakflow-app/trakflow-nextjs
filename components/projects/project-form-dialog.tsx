@@ -24,7 +24,7 @@ import {
   PROJECTS_ACTION_TEXT,
   PROJECTS_FORM_TEXT,
 } from '@/locales/app/(dashboard)/projects/projects-page-locales';
-import type { ProjectRow } from '@/lib/dal/projects';
+import type { ProjectManagerRow } from '@/lib/dal/projects';
 import type { Database } from '@/lib/types/database.types';
 
 type ProjectStatus = Database['public']['Enums']['project_status'];
@@ -45,10 +45,10 @@ type ProjectFormState = {
 type ProjectFormDialogProps = {
   mode: ProjectDialogMode;
   onClose: () => void;
-  onProjectCreated: (project: ProjectRow) => void;
-  onProjectUpdated: (project: ProjectRow) => void;
+  onProjectCreated: (project: ProjectManagerRow) => void;
+  onProjectUpdated: (project: ProjectManagerRow) => void;
   open: boolean;
-  project: ProjectRow | null;
+  project: ProjectManagerRow | null;
 };
 
 type ProjectFormFieldsProps = ProjectFormDialogProps & {
@@ -58,7 +58,7 @@ type ProjectFormFieldsProps = ProjectFormDialogProps & {
 };
 
 function getInitialProjectFormState(
-  project?: ProjectRow | null,
+  project?: ProjectManagerRow | null,
 ): ProjectFormState {
   return {
     budgetAmount: project?.budget_amount ? String(project.budget_amount) : '',

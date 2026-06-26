@@ -20,7 +20,11 @@ import {
   PROJECTS_LIST_TEXT,
   PROJECTS_PAGE_TEXT,
 } from '@/locales/app/(dashboard)/projects/projects-page-locales';
-import type { ProjectRow } from '@/lib/dal/projects';
+import {
+  hasProjectBudget,
+  type ProjectClientRow,
+  type ProjectManagerRow,
+} from '@/lib/dal/projects';
 import type { Database } from '@/lib/types/database.types';
 
 type ProjectStatus = Database['public']['Enums']['project_status'];
@@ -28,15 +32,15 @@ type FilterValue = 'all' | ProjectStatus;
 
 type ProjectsListProps = {
   canManageProjects: boolean;
-  projects: ProjectRow[];
+  projects: ProjectClientRow[];
 };
 
 /**
  * Optimistic project rows tied to the server snapshot they extend.
  */
 type ProjectOptimisticState = {
-  rows: ProjectRow[];
-  serverProjects: ProjectRow[];
+  rows: ProjectClientRow[];
+  serverProjects: ProjectClientRow[];
 };
 
 /**
@@ -59,7 +63,8 @@ export function ProjectsList({
       serverProjects: projects,
     });
   const [dialogMode, setDialogMode] = useState<ProjectDialogMode>('create');
-  const [projectToEdit, setProjectToEdit] = useState<ProjectRow | null>(null);
+  const [projectToEdit, setProjectToEdit] =
+    useState<ProjectManagerRow | null>(null);
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false);
   const projectRows =
     optimisticState.serverProjects === projects
@@ -88,13 +93,15 @@ export function ProjectsList({
     setIsProjectDialogOpen(true);
   }
 
-  function openEditDialog(project: ProjectRow) {
+  function openEditDialog(project: ProjectClientRow) {
+    if (!canManageProjects || !hasProjectBudget(project)) return;
+
     setDialogMode('edit');
     setProjectToEdit(project);
     setIsProjectDialogOpen(true);
   }
 
-  function handleProjectCreated(project: ProjectRow) {
+  function handleProjectCreated(project: ProjectManagerRow) {
     // Show the created project immediately, then refresh server data.
     setOptimisticState((currentState) => ({
       rows: [
@@ -108,7 +115,7 @@ export function ProjectsList({
     router.refresh();
   }
 
-  function handleProjectUpdated(updatedProject: ProjectRow) {
+  function handleProjectUpdated(updatedProject: ProjectManagerRow) {
     // Replace the edited row immediately, then refresh server data.
     setOptimisticState((currentState) => ({
       rows: (currentState.serverProjects === projects
@@ -195,14 +202,16 @@ export function ProjectsList({
         )}
       </div>
 
-      <ProjectFormDialog
-        mode={dialogMode}
-        onClose={() => setIsProjectDialogOpen(false)}
-        onProjectCreated={handleProjectCreated}
-        onProjectUpdated={handleProjectUpdated}
-        open={isProjectDialogOpen}
-        project={projectToEdit}
-      />
+      {canManageProjects && (
+        <ProjectFormDialog
+          mode={dialogMode}
+          onClose={() => setIsProjectDialogOpen(false)}
+          onProjectCreated={handleProjectCreated}
+          onProjectUpdated={handleProjectUpdated}
+          open={isProjectDialogOpen}
+          project={projectToEdit}
+        />
+      )}
     </div>
   );
 }
