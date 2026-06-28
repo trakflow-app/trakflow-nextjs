@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { requireOrgMember } from '@/lib/dal/auth';
 import { createClient } from '@/lib/supabase/server';
 import type {
   ProjectCrewRow,
@@ -11,8 +12,6 @@ import type {
 } from '@/lib/dal/projects';
 
 const PROJECTS_SELECT_COLUMNS = 'id, project_name';
-const PROJECTS_LIST_SELECT_COLUMNS =
-  'id, org_id, project_name, status, start_date, end_date, budget_amount, created_at';
 const PROJECTS_LIST_WITHOUT_BUDGET_SELECT_COLUMNS =
   'id, org_id, project_name, status, start_date, end_date, created_at';
 const PROJECT_DETAIL_TOOLS_SELECT_COLUMNS =
@@ -20,6 +19,9 @@ const PROJECT_DETAIL_TOOLS_SELECT_COLUMNS =
 const PROJECT_DETAIL_MATERIALS_SELECT_COLUMNS =
   'id, name, unit_qty, unit_cost, low_stock_threshold';
 const PROJECT_TEAM_SELECT_COLUMNS = 'id, name, role';
+const PROJECT_BUDGET_ACCESS_ERROR =
+  'Project budget access requires an organization manager.';
+const PROJECT_BUDGET_READER_ROLES = ['OWNER', 'FOREMAN'] as const;
 
 type ProjectReadOptions = {
   includeBudget?: boolean;
@@ -28,6 +30,44 @@ type ProjectReadOptions = {
 type ProjectManagerReadOptions = {
   includeBudget: true;
 };
+
+/**
+ * Verifies that the current authenticated account can read project budgets for the requested organization.
+ */
+async function requireProjectBudgetReader(orgId: string) {
+  const { account } = await requireOrgMember();
+  const canReadBudget =
+    account.org_id === orgId &&
+    PROJECT_BUDGET_READER_ROLES.includes(
+      account.role as (typeof PROJECT_BUDGET_READER_ROLES)[number],
+  );
+
+  if (!canReadBudget) {
+    throw new Error(PROJECT_BUDGET_ACCESS_ERROR);
+  }
+}
+
+/**
+ * Fetches project rows with budget fields through the DB-enforced manager boundary.
+ */
+async function getProjectManagerRows(params: {
+  limit?: number;
+  orgId: string;
+  projectId?: string;
+}): Promise<ProjectManagerRow[]> {
+  await requireProjectBudgetReader(params.orgId);
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('get_project_manager_rows', {
+    result_limit: params.limit,
+    target_org_id: params.orgId,
+    target_project_id: params.projectId,
+  });
+
+  if (error) throw error;
+
+  return data ?? [];
+}
 
 /**
  * Fetches project options for selectors in the current organization.
@@ -66,21 +106,13 @@ export async function getServerProjects(
   orgId: string,
   options: ProjectReadOptions = {},
 ): Promise<ProjectCrewRow[] | ProjectManagerRow[]> {
-  const supabase = await createClient();
   const includeBudget = options.includeBudget ?? false;
 
   if (includeBudget) {
-    const { data, error } = await supabase
-      .from('projects')
-      .select(PROJECTS_LIST_SELECT_COLUMNS)
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return data ?? [];
+    return getProjectManagerRows({ orgId });
   }
 
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('projects')
     .select(PROJECTS_LIST_WITHOUT_BUDGET_SELECT_COLUMNS)
@@ -110,22 +142,13 @@ export async function getRecentServerProjects(
   limit: number,
   options: ProjectReadOptions = {},
 ): Promise<ProjectCrewRow[] | ProjectManagerRow[]> {
-  const supabase = await createClient();
   const includeBudget = options.includeBudget ?? false;
 
   if (includeBudget) {
-    const { data, error } = await supabase
-      .from('projects')
-      .select(PROJECTS_LIST_SELECT_COLUMNS)
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-
-    return data ?? [];
+    return getProjectManagerRows({ limit, orgId });
   }
 
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('projects')
     .select(PROJECTS_LIST_WITHOUT_BUDGET_SELECT_COLUMNS)
@@ -156,25 +179,15 @@ export async function getServerProjectById(
   orgId: string,
   options: ProjectReadOptions = {},
 ): Promise<ProjectCrewRow | ProjectManagerRow | null> {
-  const supabase = await createClient();
   const includeBudget = options.includeBudget ?? false;
 
   if (includeBudget) {
-    const { data, error } = await supabase
-      .from('projects')
-      .select(PROJECTS_LIST_SELECT_COLUMNS)
-      .eq('id', projectId)
-      .eq('org_id', orgId)
-      .single();
+    const projects = await getProjectManagerRows({ orgId, projectId });
 
-    if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw error;
-    }
-
-    return data;
+    return projects[0] ?? null;
   }
 
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from('projects')
     .select(PROJECTS_LIST_WITHOUT_BUDGET_SELECT_COLUMNS)

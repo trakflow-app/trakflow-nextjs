@@ -603,6 +603,23 @@ export type Database = {
         Args: { join_code_input: string }
         Returns: string
       }
+      get_project_manager_rows: {
+        Args: {
+          result_limit?: number
+          target_org_id: string
+          target_project_id?: string
+        }
+        Returns: {
+          budget_amount: number | null
+          created_at: string
+          end_date: string | null
+          id: string
+          org_id: string
+          project_name: string
+          start_date: string
+          status: Database["public"]["Enums"]["project_status"]
+        }[]
+      }
       join_org_by_code: { Args: { code: string }; Returns: string }
       log_material_usage: {
         Args: {
