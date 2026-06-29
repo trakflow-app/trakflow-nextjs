@@ -40,7 +40,7 @@ async function requireProjectBudgetReader(orgId: string) {
     account.org_id === orgId &&
     PROJECT_BUDGET_READER_ROLES.includes(
       account.role as (typeof PROJECT_BUDGET_READER_ROLES)[number],
-  );
+    );
 
   if (!canReadBudget) {
     throw new Error(PROJECT_BUDGET_ACCESS_ERROR);
