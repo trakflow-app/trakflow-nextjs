@@ -3,12 +3,12 @@ import {
   UpcomingTasksCard,
   type UpcomingTask,
 } from '@/components/dashboard/upcoming-tasks-card';
-import type { ProjectRow } from '@/lib/dal/projects';
+import type { ProjectCrewRow } from '@/lib/dal/projects';
 import { UPCOMING_TASKS_LIMIT } from '@/constants/components/dashboard/dashboard-constants';
 import { DASHBOARD_TEXT } from '@/locales/components/dashboard/dashboard-locales';
 
 type DashboardOverviewProps = {
-  projects: ProjectRow[];
+  projects: ProjectCrewRow[];
 };
 
 /**

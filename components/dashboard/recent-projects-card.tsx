@@ -1,7 +1,7 @@
 import { CalendarDays } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { ProjectRow } from '@/lib/dal/projects';
+import type { ProjectCrewRow } from '@/lib/dal/projects';
 import {
   DASHBOARD_PROGRESS_BAR_HEIGHT_CLASS_NAME,
   DASHBOARD_ROLE_BADGE_VARIANTS,
@@ -15,7 +15,7 @@ import {
 import { DASHBOARD_TEXT } from '@/locales/components/dashboard/dashboard-locales';
 
 type RecentProjectsCardProps = {
-  projects: ProjectRow[];
+  projects: ProjectCrewRow[];
 };
 
 type ProjectDisplayStatus = keyof typeof DASHBOARD_TEXT.projectStatuses;
@@ -47,7 +47,10 @@ function formatProjectDate(value: string | null): string {
 /**
  * Derives a temporary progress value until the database stores project progress.
  */
-function getProjectProgressPercent(project: ProjectRow, index: number): number {
+function getProjectProgressPercent(
+  project: ProjectCrewRow,
+  index: number,
+): number {
   if (project.status === 'COMPLETED') {
     return MAX_PROGRESS_PERCENT;
   }
@@ -61,7 +64,9 @@ function getProjectProgressPercent(project: ProjectRow, index: number): number {
 /**
  * Derives a display status from project status and end date.
  */
-function getProjectDisplayStatus(project: ProjectRow): ProjectDisplayStatus {
+function getProjectDisplayStatus(
+  project: ProjectCrewRow,
+): ProjectDisplayStatus {
   if (project.status === 'COMPLETED') {
     return 'completed';
   }

@@ -10,12 +10,16 @@ import { PROJECTS_MANAGEMENT } from '@/constants/components/projects/projects-co
 export default async function ProjectsPage() {
   // Server-side data fetching ensures only org members can access this page,
   const { account } = await requireOrgMember();
-  // and that they see the most up-to-date list of projects without client-side loading states.
-  const projects = await getServerProjects(account.org_id as string);
   // Determine if user can manage projects based on their role, and pass this as a prop for conditional UI in ProjectsList.
   const canManageProjects = PROJECTS_MANAGEMENT.MANAGER_ROLES.includes(
     account.role as (typeof PROJECTS_MANAGEMENT.MANAGER_ROLES)[number],
   );
+  // and that they see the most up-to-date list of projects without client-side loading states.
+  const projects = canManageProjects
+    ? await getServerProjects(account.org_id as string, {
+        includeBudget: true,
+      })
+    : await getServerProjects(account.org_id as string);
 
   // Render the ProjectsList component with the fetched projects and permissions.
   return (

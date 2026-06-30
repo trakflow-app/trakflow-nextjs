@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireOrgMember } from '@/lib/dal/auth';
 import { createClient } from '@/lib/supabase/server';
+import { getServerProjectById } from '@/lib/dal/projects-server';
 import {
   PROJECTS_MANAGEMENT,
   PROJECT_STATUS_OPTIONS,
@@ -12,6 +13,7 @@ import type { Database } from '@/lib/types/database.types';
 
 type ProjectStatus = Database['public']['Enums']['project_status'];
 type ProjectRow = Database['public']['Tables']['projects']['Row'];
+const PROJECT_ACTION_RETURN_COLUMNS = 'id';
 
 /**
  * Result shape returned by project mutation server actions.
@@ -171,18 +173,28 @@ export async function createProjectAction(
       status: values.status,
       budget_amount: values.budgetAmount,
     })
-    .select(
-      'id, org_id, project_name, status, start_date, end_date, budget_amount, created_at',
-    )
+    .select(PROJECT_ACTION_RETURN_COLUMNS)
     .single();
 
   if (error) {
     return { error: PROJECTS_VALIDATION_TEXT.createFailed };
   }
 
+  const project = await getServerProjectById(
+    data.id,
+    account.org_id as string,
+    {
+      includeBudget: true,
+    },
+  );
+
+  if (!project) {
+    return { error: PROJECTS_VALIDATION_TEXT.createFailed };
+  }
+
   revalidatePath(PROJECTS_MANAGEMENT.ROUTES.PROJECTS_PATH);
 
-  return { success: true, project: data };
+  return { success: true, project };
 }
 
 /**
@@ -220,17 +232,27 @@ export async function updateProjectAction(
     })
     .eq('id', id)
     .eq('org_id', account.org_id as string)
-    .select(
-      'id, org_id, project_name, status, start_date, end_date, budget_amount, created_at',
-    )
+    .select(PROJECT_ACTION_RETURN_COLUMNS)
     .single();
 
   if (error) {
     return { error: PROJECTS_VALIDATION_TEXT.updateFailed };
   }
 
+  const project = await getServerProjectById(
+    data.id,
+    account.org_id as string,
+    {
+      includeBudget: true,
+    },
+  );
+
+  if (!project) {
+    return { error: PROJECTS_VALIDATION_TEXT.updateFailed };
+  }
+
   revalidatePath(PROJECTS_MANAGEMENT.ROUTES.PROJECTS_PATH);
   revalidatePath(`${PROJECTS_MANAGEMENT.ROUTES.PROJECTS_PATH}/${id}`);
 
-  return { success: true, project: data };
+  return { success: true, project };
 }
