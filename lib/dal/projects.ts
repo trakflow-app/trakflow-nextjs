@@ -43,6 +43,25 @@ export type ProjectManagerRow = ProjectCrewRow &
 export type ProjectClientRow = ProjectCrewRow | ProjectManagerRow;
 
 /**
+ * Server-side filters supported by the projects list query.
+ */
+export type ProjectListFilters = {
+  page: number;
+  pageSize: number;
+  search: string;
+  status: string;
+};
+
+/**
+ * Paginated project rows returned to the projects page.
+ */
+export type ProjectListResult = {
+  projects: ProjectClientRow[];
+  totalCount: number;
+  totalPages: number;
+};
+
+/**
  * Checks whether a client project row includes manager-only budget fields.
  */
 export function hasProjectBudget(

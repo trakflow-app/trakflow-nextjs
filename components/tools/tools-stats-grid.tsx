@@ -1,4 +1,9 @@
-import { CheckCircle2, ClipboardList, Wrench } from 'lucide-react';
+import {
+  CheckCircle2,
+  ClipboardList,
+  Wrench,
+  AlertTriangle,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { ToolStats } from '@/lib/dal/tools';
 import { TOOLS_STATS_TEXT } from '@/locales/app/(dashboard)/tools/tools-page-locales';
@@ -52,7 +57,7 @@ export function ToolsStatsGrid({ stats }: ToolsStatsGridProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Wrench />
+            <AlertTriangle />
             {TOOLS_STATS_TEXT.serviceTools}
           </CardTitle>
         </CardHeader>

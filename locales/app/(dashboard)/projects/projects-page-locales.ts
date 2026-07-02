@@ -33,6 +33,14 @@ export const PROJECTS_LIST_TEXT = {
   emptyAction: 'Create Project',
 };
 
+// Pagination copy for the projects list.
+export const PROJECTS_PAGINATION_TEXT = {
+  pageSizeLabel: 'Rows per page',
+  previousButton: 'Previous',
+  nextButton: 'Next',
+  summary: 'Page {currentPage} of {totalPages}',
+};
+
 // Field labels and placeholders for the project form.
 export const PROJECTS_FORM_TEXT = {
   nameLabel: 'Project Name',

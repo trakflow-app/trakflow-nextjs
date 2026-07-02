@@ -564,6 +564,14 @@ export type Database = {
     }
     Functions: {
       can_manage_ops: { Args: never; Returns: boolean }
+      count_project_manager_rows: {
+        Args: {
+          search_query?: string
+          status_filter?: Database["public"]["Enums"]["project_status"] | null
+          target_org_id: string
+        }
+        Returns: number
+      }
       checkout_tools: {
         Args: {
           condition: Database["public"]["Enums"]["tool_condition"]
@@ -602,6 +610,39 @@ export type Database = {
       get_org_name_by_code: {
         Args: { join_code_input: string }
         Returns: string
+      }
+      get_project_manager_page: {
+        Args: {
+          page_limit?: number
+          page_offset?: number
+          search_query?: string
+          status_filter?: Database["public"]["Enums"]["project_status"] | null
+          target_org_id: string
+        }
+        Returns: {
+          projects: Json
+          total_count: number
+        }[]
+      }
+      get_paginated_project_manager_rows: {
+        Args: {
+          page_limit?: number
+          page_offset?: number
+          search_query?: string
+          status_filter?: Database["public"]["Enums"]["project_status"] | null
+          target_org_id: string
+        }
+        Returns: {
+          budget_amount: number | null
+          created_at: string
+          end_date: string | null
+          id: string
+          org_id: string
+          project_name: string
+          start_date: string
+          status: Database["public"]["Enums"]["project_status"]
+          total_count: number
+        }[]
       }
       get_project_manager_rows: {
         Args: {
