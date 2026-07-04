@@ -19,7 +19,7 @@ export default function StatsGrid({ stats }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Box className="w-5 h-5 text-sky-500" />
+            <Box className="w-5 h-5" />
             {statsGrid.totalMaterials}
           </CardTitle>
         </CardHeader>
@@ -31,7 +31,7 @@ export default function StatsGrid({ stats }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingDown className="w-5 h-5 text-amber-500" />
+            <TrendingDown className="w-5 h-5" />
             {statsGrid.inventoryValue}
           </CardTitle>
         </CardHeader>
@@ -45,7 +45,7 @@ export default function StatsGrid({ stats }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
+            <AlertTriangle className="w-5 h-5" />
             {statsGrid.lowStock}
           </CardTitle>
         </CardHeader>

@@ -6,10 +6,16 @@ import type {
   ProjectCrewRow,
   ProjectDetailMaterial,
   ProjectDetailTool,
+  ProjectListFilters,
+  ProjectListResult,
   ProjectManagerRow,
   ProjectOption,
   ProjectTeamMember,
 } from '@/lib/dal/projects';
+import type { Database, Json } from '@/lib/types/database.types';
+
+type ProjectStatus = Database['public']['Enums']['project_status'];
+type ProjectManagerPageProject = ProjectManagerRow;
 
 const PROJECTS_SELECT_COLUMNS = 'id, project_name';
 const PROJECTS_LIST_WITHOUT_BUDGET_SELECT_COLUMNS =
@@ -28,6 +34,14 @@ type ProjectReadOptions = {
 };
 
 type ProjectManagerReadOptions = {
+  includeBudget: true;
+};
+
+type ProjectPageReadOptions = {
+  includeBudget?: boolean;
+};
+
+type ProjectManagerPageReadOptions = {
   includeBudget: true;
 };
 
@@ -67,6 +81,70 @@ async function getProjectManagerRows(params: {
   if (error) throw error;
 
   return data ?? [];
+}
+
+/**
+ * Maps the manager-only paginated RPC project payload into the client project shape.
+ */
+function mapProjectManagerPageRow(
+  project: ProjectManagerPageProject,
+): ProjectManagerRow {
+  return {
+    budget_amount: project.budget_amount,
+    created_at: project.created_at,
+    end_date: project.end_date,
+    id: project.id,
+    org_id: project.org_id,
+    project_name: project.project_name,
+    start_date: project.start_date,
+    status: project.status,
+  };
+}
+
+/**
+ * Maps the JSON projects payload from the manager page RPC.
+ */
+function mapProjectManagerPageProjects(projects: Json): ProjectManagerRow[] {
+  if (!Array.isArray(projects)) return [];
+
+  return (projects as unknown as ProjectManagerPageProject[]).map(
+    mapProjectManagerPageRow,
+  );
+}
+
+/**
+ * Fetches one budget-aware projects page through the DB-enforced manager boundary.
+ */
+async function getProjectManagerPage(
+  orgId: string,
+  filters: ProjectListFilters,
+): Promise<ProjectListResult> {
+  await requireProjectBudgetReader(orgId);
+
+  const supabase = await createClient();
+  const pageStartIndex = (filters.page - 1) * filters.pageSize;
+  const statusFilter =
+    filters.status === 'all' ? null : (filters.status as ProjectStatus);
+  const { data, error } = await supabase
+    .rpc('get_project_manager_page', {
+      page_limit: filters.pageSize,
+      page_offset: pageStartIndex,
+      search_query: filters.search,
+      status_filter: statusFilter,
+      target_org_id: orgId,
+    })
+    .single();
+
+  if (error) throw error;
+
+  const projects = mapProjectManagerPageProjects(data.projects);
+  const totalCount = data.total_count;
+
+  return {
+    projects,
+    totalCount,
+    totalPages: Math.max(1, Math.ceil(totalCount / filters.pageSize)),
+  };
 }
 
 /**
@@ -122,6 +200,59 @@ export async function getServerProjects(
   if (error) throw error;
 
   return data ?? [];
+}
+
+/**
+ * Fetches a paginated projects page for an organization.
+ */
+export function getServerProjectsPage(
+  orgId: string,
+  filters: ProjectListFilters,
+  options: ProjectManagerPageReadOptions,
+): Promise<ProjectListResult>;
+export function getServerProjectsPage(
+  orgId: string,
+  filters: ProjectListFilters,
+  options?: ProjectPageReadOptions,
+): Promise<ProjectListResult>;
+export async function getServerProjectsPage(
+  orgId: string,
+  filters: ProjectListFilters,
+  options: ProjectPageReadOptions = {},
+): Promise<ProjectListResult> {
+  if (options.includeBudget) {
+    return getProjectManagerPage(orgId, filters);
+  }
+
+  const supabase = await createClient();
+  const pageStartIndex = (filters.page - 1) * filters.pageSize;
+  const pageEndIndex = pageStartIndex + filters.pageSize - 1;
+  let query = supabase
+    .from('projects')
+    .select(PROJECTS_LIST_WITHOUT_BUDGET_SELECT_COLUMNS, { count: 'exact' })
+    .eq('org_id', orgId);
+
+  if (filters.search) {
+    query = query.ilike('project_name', `%${filters.search}%`);
+  }
+
+  if (filters.status !== 'all') {
+    query = query.eq('status', filters.status as ProjectStatus);
+  }
+
+  const { data, error, count } = await query
+    .order('created_at', { ascending: false })
+    .range(pageStartIndex, pageEndIndex);
+
+  if (error) throw error;
+
+  const totalCount = count ?? 0;
+
+  return {
+    projects: data ?? [],
+    totalCount,
+    totalPages: Math.max(1, Math.ceil(totalCount / filters.pageSize)),
+  };
 }
 
 /**

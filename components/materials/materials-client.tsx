@@ -273,24 +273,24 @@ export function MaterialsClient({
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {materialsPage.materialsManagementTitle}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {materialsPage.materialsManagementSubtitle}
-          </p>
+    <div className="min-h-screen bg-background px-6 py-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">
+              {materialsPage.materialsManagementTitle}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {materialsPage.materialsManagementSubtitle}
+            </p>
+          </div>
+
+          <Button onClick={() => setAddModalOpen(true)}>
+            <Plus />
+            {materialsPage.addMaterialButton}
+          </Button>
         </div>
 
-        <Button onClick={() => setAddModalOpen(true)}>
-          <Plus />
-          {materialsPage.addMaterialButton}
-        </Button>
-      </div>
-
-      <div className="flex flex-col gap-6">
         <StatsGrid stats={materialStats} />
 
         <div className="flex items-center justify-between">
