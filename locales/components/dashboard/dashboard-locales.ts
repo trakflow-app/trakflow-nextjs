@@ -39,36 +39,6 @@ export const DASHBOARD_TEXT = {
     medium: 'medium',
     low: 'low',
   },
-  /**
-   * TODO: Replace with persisted scheduled task data when task management ships.
-   */
-  mockTasks: [
-    {
-      title: 'Foundation inspection - Downtown Office',
-      due: 'Tomorrow',
-      priority: 'high',
-    },
-    {
-      title: 'Material delivery - Riverside Apartments',
-      due: 'Apr 8',
-      priority: 'medium',
-    },
-    {
-      title: 'Safety audit - Highway Bridge',
-      due: 'Apr 10',
-      priority: 'high',
-    },
-    {
-      title: 'Client meeting - Shopping Mall',
-      due: 'Apr 12',
-      priority: 'low',
-    },
-    {
-      title: 'Electrical inspection - Office Complex',
-      due: 'Apr 15',
-      priority: 'medium',
-    },
-  ],
   crewManagement: {
     title: 'Crew',
     subtitle: 'Manage crew onboarding and team access',

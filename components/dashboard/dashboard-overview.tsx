@@ -4,22 +4,20 @@ import {
   type UpcomingTask,
 } from '@/components/dashboard/upcoming-tasks-card';
 import type { ProjectCrewRow } from '@/lib/dal/projects';
-import { UPCOMING_TASKS_LIMIT } from '@/constants/components/dashboard/dashboard-constants';
 import { DASHBOARD_TEXT } from '@/locales/components/dashboard/dashboard-locales';
 
 type DashboardOverviewProps = {
   projects: ProjectCrewRow[];
+  upcomingTasks?: UpcomingTask[];
 };
 
 /**
  * Renders the shared Dashboard tab content.
  */
-export function DashboardOverview({ projects }: DashboardOverviewProps) {
-  const upcomingTasks = DASHBOARD_TEXT.mockTasks.slice(
-    0,
-    UPCOMING_TASKS_LIMIT,
-  ) as UpcomingTask[];
-
+export function DashboardOverview({
+  projects,
+  upcomingTasks = [],
+}: DashboardOverviewProps) {
   return (
     <main className="bg-muted/30 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex max-w-7xl flex-col gap-8">
