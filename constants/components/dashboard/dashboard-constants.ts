@@ -12,6 +12,7 @@ export const MATERIALS_ROUTE = '/materials';
 export const CREW_MANAGEMENT_ROUTE = '/crew';
 export const OWNER_INVITE_ROUTE = '/owner/invite';
 export const FOREMAN_INVITE_ROUTE = '/foreman/invite';
+export const PROFILE_ROUTE = '/profile';
 export const DEFAULT_ORGANIZATION_NAME = 'Organization';
 export const DEFAULT_ORGANIZATION_CODE = 'N/A';
 export const RECENT_PROJECTS_LIMIT = 4;

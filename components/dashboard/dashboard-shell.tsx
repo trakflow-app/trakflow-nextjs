@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import LogoutButton from '@/components/auth/logout-button';
 import { DashboardTabs } from '@/components/dashboard/dashboard-tabs';
@@ -7,6 +8,7 @@ import {
   DASHBOARD_ROLE_BADGE_VARIANTS,
   DASHBOARD_SHELL_LOGO_SIZE,
   DASHBOARD_TABS_BY_ROLE,
+  PROFILE_ROUTE,
   type DashboardUserRole,
 } from '@/constants/components/dashboard/dashboard-constants';
 import { DASHBOARD_TEXT } from '@/locales/components/dashboard/dashboard-locales';
@@ -57,12 +59,18 @@ export function DashboardShell({
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-medium">{userName}</p>
-              <Badge variant={DASHBOARD_ROLE_BADGE_VARIANTS[role]}>
+            <Link
+              href={PROFILE_ROUTE}
+              className="max-w-28 rounded-md text-right outline-none transition-opacity hover:opacity-75 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:max-w-none"
+            >
+              <p className="truncate text-sm font-medium">{userName}</p>
+              <Badge
+                className="hidden sm:inline-flex"
+                variant={DASHBOARD_ROLE_BADGE_VARIANTS[role]}
+              >
                 {DASHBOARD_TEXT.roleLabels[role]}
               </Badge>
-            </div>
+            </Link>
             <LogoutButton variant="ghost" />
           </div>
         </div>
