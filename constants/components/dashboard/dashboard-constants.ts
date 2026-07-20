@@ -15,7 +15,6 @@ export const FOREMAN_INVITE_ROUTE = '/foreman/invite';
 export const DEFAULT_ORGANIZATION_NAME = 'Organization';
 export const DEFAULT_ORGANIZATION_CODE = 'N/A';
 export const RECENT_PROJECTS_LIMIT = 4;
-export const UPCOMING_TASKS_LIMIT = 5;
 export const MAX_PROGRESS_PERCENT = 100;
 export const MIN_PROGRESS_PERCENT = 0;
 export const PROJECT_RISK_WINDOW_DAYS = 14;

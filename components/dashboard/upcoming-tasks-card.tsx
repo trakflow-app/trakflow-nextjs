@@ -1,5 +1,7 @@
+import { CalendarX2Icon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
 import {
   DASHBOARD_PRIORITY_ACCENT_CLASS_NAMES,
   DASHBOARD_PRIORITY_VARIANTS,
@@ -55,14 +57,11 @@ export function UpcomingTasksCard({ tasks }: UpcomingTasksCardProps) {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col gap-1 rounded-lg bg-muted p-4">
-            <p className="text-sm font-medium">
-              {DASHBOARD_TEXT.emptyTasksTitle}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {DASHBOARD_TEXT.emptyTasksDescription}
-            </p>
-          </div>
+          <EmptyState
+            icon={CalendarX2Icon}
+            title={DASHBOARD_TEXT.emptyTasksTitle}
+            description={DASHBOARD_TEXT.emptyTasksDescription}
+          />
         )}
       </CardContent>
     </Card>
