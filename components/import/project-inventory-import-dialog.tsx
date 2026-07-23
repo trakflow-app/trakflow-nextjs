@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
 import type { ChangeEvent, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import { FileUp, Sparkles, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,16 @@ import {
   PROJECT_INVENTORY_IMPORT_REQUIRED_HEADERS,
 } from '@/constants/components/import/project-inventory-import-constants';
 import { projectInventoryImportText } from '@/locales/components/import/project-inventory-import-locales';
+import {
+  normalizeToolCondition,
+  normalizeToolStatus,
+} from '@/lib/validations/project-inventory-import-validations';
+import { importProjectInventoryAction } from '@/app/services/project-inventory-import-services';
+import {
+  extractProjectInventoryFromDocument,
+  type ProjectInventoryExtractionDraft,
+} from '@/app/services/project-inventory-ocr-services';
+import { showToast } from '@/lib/toast';
 
 type ImportProjectOption = {
   id: string;
@@ -69,11 +80,12 @@ const EMPTY_CELL = '';
 const ROW_ID_SEPARATOR = '-';
 
 /**
- * Dialog for previewing project tools and materials from import extractors.
+ * Dialog for previewing and saving project tools and materials from import extractors.
  */
 export function ProjectInventoryImportDialog({
   projects,
 }: ProjectInventoryImportDialogProps) {
+  const router = useRouter();
   const csvInputRef = useRef<HTMLInputElement | null>(null);
   const ocrInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -81,6 +93,9 @@ export function ProjectInventoryImportDialog({
   const [ocrFileName, setOcrFileName] = useState('');
   const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [isExtracting, startExtractTransition] = useTransition();
+  const [isSaving, startSaveTransition] = useTransition();
+  const isBusy = isExtracting || isSaving;
 
   const toolCount = previewRows.filter(
     (row) => row.itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL,
@@ -103,6 +118,10 @@ export function ProjectInventoryImportDialog({
    * Resets the local preview when the dialog closes.
    */
   function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen && isBusy) {
+      return;
+    }
+
     if (!nextOpen) {
       resetPreview();
     }
@@ -122,6 +141,7 @@ export function ProjectInventoryImportDialog({
     }
 
     setCsvFileName(file.name);
+    setOcrFileName('');
 
     if (!isCsvFile(file)) {
       setPreviewRows([]);
@@ -141,7 +161,7 @@ export function ProjectInventoryImportDialog({
   }
 
   /**
-   * Tracks the selected Gemini OCR source file until extraction is implemented.
+   * Sends the selected document to Gemini and populates the preview from the draft it returns.
    */
   function handleOcrFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -152,13 +172,114 @@ export function ProjectInventoryImportDialog({
     }
 
     setOcrFileName(file.name);
+    setCsvFileName('');
 
     if (!isOcrFile(file)) {
+      setPreviewRows([]);
       setErrors([projectInventoryImportText.errors.unsupportedOcrFile]);
       return;
     }
 
     setErrors([]);
+    setPreviewRows([]);
+
+    const formData = new FormData();
+    formData.set(PROJECT_INVENTORY_IMPORT.OCR.FILE_FIELD_NAME, file);
+
+    startExtractTransition(() => {
+      void (async () => {
+        const result = await extractProjectInventoryFromDocument(formData);
+
+        if (!result.draft) {
+          setErrors([result.error]);
+          return;
+        }
+
+        const parsed = buildPreviewRowsFromExtractionDraft(result.draft);
+        setPreviewRows(parsed.rows);
+        setErrors(parsed.errors);
+      })();
+    });
+  }
+
+  /**
+   * Saves the reviewed draft rows as tools and materials.
+   */
+  function handleSave() {
+    const nameById = new Map(previewRows.map((row) => [row.id, row.name]));
+    const toolsPayload = previewRows
+      .filter((row) => row.itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL)
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        status: row.status,
+        condition: row.condition,
+        notes: row.notes || null,
+      }));
+    const materialsPayload = previewRows
+      .filter(
+        (row) => row.itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.MATERIAL,
+      )
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        quantity: Number(row.quantity),
+        unitCost: Number(row.unitCost),
+      }));
+
+    startSaveTransition(() => {
+      void (async () => {
+        const result = await importProjectInventoryAction({
+          projectId: matchedProject?.id ?? null,
+          tools: toolsPayload,
+          materials: materialsPayload,
+        });
+
+        if (result.error) {
+          showToast(result.error, 'error');
+          return;
+        }
+
+        const rowResults = result.results ?? [];
+        const failedResults = rowResults.filter((row) => !row.success);
+        const succeededCount = rowResults.length - failedResults.length;
+
+        if (failedResults.length === 0) {
+          showToast(
+            projectInventoryImportText.saveResults.allSucceeded.replace(
+              '{count}',
+              String(succeededCount),
+            ),
+            'success',
+          );
+          resetPreview();
+          setOpen(false);
+          router.refresh();
+          return;
+        }
+
+        const failedIds = new Set(failedResults.map((row) => row.id));
+        setPreviewRows((rows) => rows.filter((row) => failedIds.has(row.id)));
+        setErrors(
+          failedResults.map(
+            (row) =>
+              `${nameById.get(row.id) ?? row.id}: ${row.error ?? 'Could not be saved.'}`,
+          ),
+        );
+
+        if (succeededCount > 0) {
+          showToast(
+            projectInventoryImportText.saveResults.partialSuccess
+              .replace('{succeeded}', String(succeededCount))
+              .replace('{failed}', String(failedResults.length)),
+            'error',
+          );
+          router.refresh();
+        } else {
+          showToast(projectInventoryImportText.saveResults.allFailed, 'error');
+        }
+      })();
+    });
   }
 
   /**
@@ -224,6 +345,7 @@ export function ProjectInventoryImportDialog({
                   type="file"
                   accept={PROJECT_INVENTORY_IMPORT.FILES.CSV_ACCEPT}
                   className="sr-only"
+                  disabled={isBusy}
                   onChange={handleCsvFileChange}
                 />
                 <div className="flex flex-wrap items-center gap-2">
@@ -276,6 +398,7 @@ export function ProjectInventoryImportDialog({
                   type="file"
                   accept={PROJECT_INVENTORY_IMPORT.FILES.OCR_ACCEPT}
                   className="sr-only"
+                  disabled={isBusy}
                   onChange={handleOcrFileChange}
                 />
                 <div className="flex flex-wrap items-center gap-2">
@@ -294,7 +417,11 @@ export function ProjectInventoryImportDialog({
                 </div>
               </ImportField>
               <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-                {projectInventoryImportText.ocrNotConnected}
+                {isExtracting
+                  ? projectInventoryImportText.ocrExtracting
+                  : ocrFileName && errors.length === 0
+                    ? projectInventoryImportText.ocrExtractSuccess
+                    : projectInventoryImportText.ocrIdleHint}
               </div>
             </div>
           </div>
@@ -338,7 +465,11 @@ export function ProjectInventoryImportDialog({
                 {projectInventoryImportText.previewTitle}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {projectInventoryImportText.saveDisabledMessage}
+                {previewRows.length === 0
+                  ? projectInventoryImportText.saveDisabledMessage
+                  : materialCount > 0
+                    ? projectInventoryImportText.materialNotesUnsupported
+                    : null}
               </p>
             </div>
 
@@ -396,12 +527,19 @@ export function ProjectInventoryImportDialog({
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" disabled={isBusy}>
               {projectInventoryImportText.cancelButton}
             </Button>
           </DialogClose>
-          <Button type="button" disabled>
-            {projectInventoryImportText.saveButton}
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={previewRows.length === 0 || isBusy}
+            isLoading={isSaving}
+          >
+            {isSaving
+              ? projectInventoryImportText.savingButton
+              : projectInventoryImportText.saveButton}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -533,25 +671,204 @@ function mapCsvLineToPreviewRow(
     };
   }
 
+  return buildPreviewRow({
+    itemType,
+    projectName:
+      csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.projectName]?.trim() ?? '',
+    name,
+    rawStatus: csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.status]?.trim() ?? '',
+    rawCondition:
+      csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.condition]?.trim() ?? '',
+    rawQuantity:
+      csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.quantity]?.trim() ?? '',
+    rawUnitCost:
+      csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.unitCost]?.trim() ?? '',
+    notes: csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.notes]?.trim() ?? '',
+    rowId: `${itemType}${ROW_ID_SEPARATOR}${rowIndex}`,
+  });
+}
+
+/**
+ * Maps a Gemini extraction draft into preview rows, running every row through
+ * the same normalization and validation the CSV path uses.
+ */
+function buildPreviewRowsFromExtractionDraft(
+  draft: ProjectInventoryExtractionDraft,
+): CsvParseResult {
+  const errors: string[] = [];
+  const rows: ImportPreviewRow[] = [];
+  const projectName = draft.projectName?.trim() ?? '';
+
+  draft.tools.forEach((tool, index) => {
+    const name = tool.name?.trim() ?? '';
+
+    if (!name) {
+      errors.push(projectInventoryImportText.errors.missingName);
+      return;
+    }
+
+    const result = buildPreviewRow({
+      itemType: PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL,
+      projectName,
+      name,
+      rawStatus: tool.status?.trim() ?? '',
+      rawCondition: tool.condition?.trim() ?? '',
+      rawQuantity: EMPTY_CELL,
+      rawUnitCost: EMPTY_CELL,
+      notes: tool.notes?.trim() ?? '',
+      rowId: `ocr-tool${ROW_ID_SEPARATOR}${index}`,
+    });
+
+    if (result.row) {
+      rows.push(result.row);
+    } else if (result.error) {
+      errors.push(result.error);
+    }
+  });
+
+  draft.materials.forEach((material, index) => {
+    const name = material.name?.trim() ?? '';
+
+    if (!name) {
+      errors.push(projectInventoryImportText.errors.missingName);
+      return;
+    }
+
+    const result = buildPreviewRow({
+      itemType: PROJECT_INVENTORY_IMPORT.ITEM_TYPES.MATERIAL,
+      projectName,
+      name,
+      rawStatus: EMPTY_CELL,
+      rawCondition: EMPTY_CELL,
+      rawQuantity: material.quantity != null ? String(material.quantity) : '',
+      rawUnitCost: material.unitCost != null ? String(material.unitCost) : '',
+      notes: material.notes?.trim() ?? '',
+      rowId: `ocr-material${ROW_ID_SEPARATOR}${index}`,
+    });
+
+    if (result.row) {
+      rows.push(result.row);
+    } else if (result.error) {
+      errors.push(result.error);
+    }
+  });
+
+  return { errors: buildPreviewErrors(errors), rows };
+}
+
+type BuildPreviewRowInput = {
+  itemType: ImportItemType;
+  projectName: string;
+  name: string;
+  rawStatus: string;
+  rawCondition: string;
+  rawQuantity: string;
+  rawUnitCost: string;
+  notes: string;
+  rowId: string;
+};
+
+/**
+ * Normalizes and validates a single draft row into a save-ready preview row.
+ * Shared by the CSV parser and the Gemini extraction mapper so both producers
+ * are held to the same rules before a row can reach the save action.
+ */
+function buildPreviewRow(
+  input: BuildPreviewRowInput,
+): { error: string | null; row: ImportPreviewRow | null } {
+  const {
+    itemType,
+    projectName,
+    name,
+    rawStatus,
+    rawCondition,
+    rawQuantity,
+    rawUnitCost,
+    notes,
+    rowId,
+  } = input;
+
+  if (itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL) {
+    const status = rawStatus
+      ? normalizeToolStatus(rawStatus)
+      : PROJECT_INVENTORY_IMPORT.DEFAULTS.TOOL_STATUS;
+
+    if (!status) {
+      return {
+        error: projectInventoryImportText.errors.unknownToolStatus.replace(
+          '{name}',
+          name,
+        ),
+        row: null,
+      };
+    }
+
+    const condition = rawCondition
+      ? normalizeToolCondition(rawCondition)
+      : PROJECT_INVENTORY_IMPORT.DEFAULTS.TOOL_CONDITION;
+
+    if (!condition) {
+      return {
+        error: projectInventoryImportText.errors.unknownToolCondition.replace(
+          '{name}',
+          name,
+        ),
+        row: null,
+      };
+    }
+
+    return {
+      error: null,
+      row: {
+        id: rowId,
+        itemType,
+        projectName,
+        name,
+        quantity: EMPTY_CELL,
+        unitCost: EMPTY_CELL,
+        condition,
+        status,
+        notes,
+      },
+    };
+  }
+
+  const quantity = rawQuantity.trim() === '' ? NaN : Number(rawQuantity);
+
+  if (!Number.isFinite(quantity) || quantity < 0) {
+    return {
+      error: projectInventoryImportText.errors.missingMaterialQuantity.replace(
+        '{name}',
+        name,
+      ),
+      row: null,
+    };
+  }
+
+  const unitCost = rawUnitCost.trim() === '' ? NaN : Number(rawUnitCost);
+
+  if (!Number.isFinite(unitCost) || unitCost <= 0) {
+    return {
+      error: projectInventoryImportText.errors.missingMaterialUnitCost.replace(
+        '{name}',
+        name,
+      ),
+      row: null,
+    };
+  }
+
   return {
     error: null,
     row: {
-      id: `${itemType}${ROW_ID_SEPARATOR}${rowIndex}`,
+      id: rowId,
       itemType,
-      projectName:
-        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.projectName]?.trim() ?? '',
+      projectName,
       name,
-      quantity:
-        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.quantity]?.trim() ?? '',
-      unitCost:
-        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.unitCost]?.trim() ?? '',
-      condition:
-        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.condition]?.trim() ||
-        PROJECT_INVENTORY_IMPORT.DEFAULTS.TOOL_CONDITION,
-      status:
-        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.status]?.trim() ||
-        PROJECT_INVENTORY_IMPORT.DEFAULTS.TOOL_STATUS,
-      notes: csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.notes]?.trim() ?? '',
+      quantity: String(quantity),
+      unitCost: String(unitCost),
+      condition: EMPTY_CELL,
+      status: EMPTY_CELL,
+      notes,
     },
   };
 }
@@ -571,7 +888,7 @@ function isCsvFile(file: File) {
 }
 
 /**
- * Checks whether a file can be sent through the planned Gemini OCR path.
+ * Checks whether a file can be sent through the Gemini OCR extraction path.
  */
 function isOcrFile(file: File) {
   const normalizedFileName = file.name.toLowerCase();
@@ -641,10 +958,6 @@ function getRowDetails(row: ImportPreviewRow) {
     return projectInventoryImportText.rowDetails.tool
       .replace('{status}', row.status)
       .replace('{condition}', row.condition);
-  }
-
-  if (!row.quantity || !row.unitCost) {
-    return projectInventoryImportText.rowDetails.missingMaterialValues;
   }
 
   return projectInventoryImportText.rowDetails.material

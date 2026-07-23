@@ -26,11 +26,15 @@ export const PROJECT_INVENTORY_IMPORT = {
     MATERIAL: 'material',
   },
   DEFAULTS: {
-    TOOL_STATUS: 'Available',
-    TOOL_CONDITION: 'Good',
+    TOOL_STATUS: 'AVAILABLE',
+    TOOL_CONDITION: 'GOOD',
+    MATERIAL_LOW_STOCK_THRESHOLD: 0,
   },
   PREVIEW: {
     MAX_ERROR_COUNT: 3,
+  },
+  OCR: {
+    FILE_FIELD_NAME: 'file',
   },
 } as const;
 
