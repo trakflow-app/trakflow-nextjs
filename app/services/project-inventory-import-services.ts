@@ -117,9 +117,7 @@ export async function importProjectInventoryAction(params: {
 }): Promise<ImportProjectInventoryResult> {
   const { account } = await requireOrgMember();
 
-  if (
-    !INVENTORY_MANAGER_ROLES.includes(account.role as InventoryManagerRole)
-  ) {
+  if (!INVENTORY_MANAGER_ROLES.includes(account.role as InventoryManagerRole)) {
     return { error: PROJECT_INVENTORY_IMPORT_ERRORS.permissionDenied };
   }
 

@@ -276,7 +276,9 @@ export function ProjectInventoryImportDialog({
   function handleSave() {
     const nameById = new Map(previewRows.map((row) => [row.id, row.name]));
     const toolsPayload = readyRows
-      .filter((row) => row.itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL)
+      .filter(
+        (row) => row.itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL,
+      )
       .map((row) => ({
         id: row.id,
         name: row.name,
@@ -1071,7 +1073,12 @@ type PreviewTableProps = {
  * material) since every visible row shares that scope. Rows with a problem
  * are tinted and editable in place instead of being dropped from the file.
  */
-function PreviewTable({ rows, scope, disabled, onRowFieldChange }: PreviewTableProps) {
+function PreviewTable({
+  rows,
+  scope,
+  disabled,
+  onRowFieldChange,
+}: PreviewTableProps) {
   const isToolScope = scope === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL;
 
   return (
@@ -1081,7 +1088,9 @@ function PreviewTable({ rows, scope, disabled, onRowFieldChange }: PreviewTableP
           <TableHead className="w-24">
             {projectInventoryImportText.readyBadge}
           </TableHead>
-          <TableHead>{projectInventoryImportText.tableColumns.project}</TableHead>
+          <TableHead>
+            {projectInventoryImportText.tableColumns.project}
+          </TableHead>
           <TableHead>{projectInventoryImportText.tableColumns.name}</TableHead>
           {isToolScope ? (
             <>

@@ -14,7 +14,10 @@ const ENUM_NORMALIZE_PATTERN = /[\s-]+/g;
  * Maps free-text status values (CSV/OCR) onto the strict manual-status enum.
  */
 export function normalizeToolStatus(value: string): ToolStatus | null {
-  const normalized = value.trim().toUpperCase().replace(ENUM_NORMALIZE_PATTERN, '_');
+  const normalized = value
+    .trim()
+    .toUpperCase()
+    .replace(ENUM_NORMALIZE_PATTERN, '_');
   return (TOOL_MANUAL_STATUS_VALUES as readonly string[]).includes(normalized)
     ? (normalized as ToolStatus)
     : null;
@@ -24,7 +27,10 @@ export function normalizeToolStatus(value: string): ToolStatus | null {
  * Maps free-text condition values (CSV/OCR) onto the strict condition enum.
  */
 export function normalizeToolCondition(value: string): ToolCondition | null {
-  const normalized = value.trim().toUpperCase().replace(ENUM_NORMALIZE_PATTERN, '_');
+  const normalized = value
+    .trim()
+    .toUpperCase()
+    .replace(ENUM_NORMALIZE_PATTERN, '_');
   return (TOOL_CONDITION_VALUES as readonly string[]).includes(normalized)
     ? (normalized as ToolCondition)
     : null;

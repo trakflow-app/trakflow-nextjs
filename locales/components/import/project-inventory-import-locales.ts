@@ -57,13 +57,13 @@ export const projectInventoryImportText = {
     invalidRows: '{count} rows could not be read and were left out.',
     unknownItemType: 'Use tool or material for item_type.',
     missingName: 'Enter a name.',
-    unknownToolStatus:
-      'Status must be Available, Out of Service, or Archived.',
+    unknownToolStatus: 'Status must be Available, Out of Service, or Archived.',
     unknownToolCondition:
       'Condition must be Good, Fair, Damaged, or Out of Service.',
     missingMaterialQuantity: 'Enter a quantity of 0 or more.',
     missingMaterialUnitCost: 'Enter a cost greater than 0.',
-    extractionFailed: 'Could not read that file. Try a different file or use a spreadsheet instead.',
+    extractionFailed:
+      'Could not read that file. Try a different file or use a spreadsheet instead.',
   },
   cancelButton: 'Cancel',
   saveButton: 'Import rows',

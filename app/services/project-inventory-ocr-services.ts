@@ -1,6 +1,10 @@
 'use server';
 
-import { GoogleGenerativeAI, SchemaType, type Schema } from '@google/generative-ai';
+import {
+  GoogleGenerativeAI,
+  SchemaType,
+  type Schema,
+} from '@google/generative-ai';
 import { requireOrgMember } from '@/lib/dal/auth';
 import { PROJECT_INVENTORY_IMPORT } from '@/constants/components/import/project-inventory-import-constants';
 
@@ -100,7 +104,11 @@ export type ExtractedMaterialDraft = {
  * carries one populated list, never a "tools vs materials" split to resolve.
  */
 export type ProjectInventoryExtractionDraft =
-  | { itemType: 'tool'; projectName: string | null; tools: ExtractedToolDraft[] }
+  | {
+      itemType: 'tool';
+      projectName: string | null;
+      tools: ExtractedToolDraft[];
+    }
   | {
       itemType: 'material';
       projectName: string | null;
@@ -143,9 +151,7 @@ export async function extractProjectInventoryFromDocument(
 ): Promise<ExtractProjectInventoryResult> {
   const { account } = await requireOrgMember();
 
-  if (
-    !INVENTORY_MANAGER_ROLES.includes(account.role as InventoryManagerRole)
-  ) {
+  if (!INVENTORY_MANAGER_ROLES.includes(account.role as InventoryManagerRole)) {
     return { error: EXTRACTION_ERRORS.permissionDenied };
   }
 
@@ -201,7 +207,11 @@ export async function extractProjectInventoryFromDocument(
     return {
       draft:
         scope === 'tool'
-          ? { itemType: 'tool', projectName, tools: items as ExtractedToolDraft[] }
+          ? {
+              itemType: 'tool',
+              projectName,
+              tools: items as ExtractedToolDraft[],
+            }
           : {
               itemType: 'material',
               projectName,

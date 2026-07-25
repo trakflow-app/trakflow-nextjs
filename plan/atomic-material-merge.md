@@ -112,6 +112,7 @@ grant execute on function public.merge_or_create_material(uuid, text, numeric, n
 ```
 
 Key decisions baked into this:
+
 - `org_id` is **not** a parameter — it's always derived from the caller's own account row, same as `log_material_usage`'s `project_id`-vs-`caller_account.org_id` check. No caller-supplied org override, so there's no privilege-escalation surface.
 - `low_stock_threshold` is only applied on the insert branch (`excluded` values aren't referenced for it in `do update`), matching current JS behavior: merging into existing stock doesn't reset a threshold someone already configured.
 - The `ON CONFLICT` target expression must be **textually identical** to the unique index definition (including the literal sentinel UUID, not a variable) for Postgres to match it against the index — this is a real implementation detail to get right, not just a style choice.
@@ -143,7 +144,9 @@ Replace the batch pre-fetch map + per-row insert/update branch with a straightfo
 ```ts
 for (const materialRow of params.materials) {
   const parsed = importMaterialRowSchema.safeParse(materialRow);
-  if (!parsed.success) { /* existing invalid-row handling */ continue; }
+  if (!parsed.success) {
+    /* existing invalid-row handling */ continue;
+  }
 
   const { error } = await supabase.rpc('merge_or_create_material', {
     p_project_id: params.projectId,
@@ -153,7 +156,9 @@ for (const materialRow of params.materials) {
     p_low_stock_threshold: parsed.data.lowStockThreshold,
   });
 
-  if (error) { /* existing per-row failure handling */ continue; }
+  if (error) {
+    /* existing per-row failure handling */ continue;
+  }
 
   materialsSaved += 1;
   results.push({ id: materialRow.id, entity: 'material', success: true });
