@@ -36,7 +36,17 @@ export const PROJECT_INVENTORY_IMPORT = {
   OCR: {
     FILE_FIELD_NAME: 'file',
   },
+  TEMPLATE: {
+    FILE_NAME: 'trakflow-inventory-template.csv',
+    MIME_TYPE: 'text/csv',
+  },
 } as const;
+
+export const PROJECT_INVENTORY_IMPORT_TEMPLATE_CSV = [
+  'project_name,item_type,name,quantity,unit_cost,condition,status,notes',
+  'Kitchen Remodel,tool,Cordless drill,,,Good,Available,Stored in trailer',
+  'Kitchen Remodel,material,2x4 lumber,50,4.25,,,Delivered to site',
+].join('\n');
 
 export const PROJECT_INVENTORY_IMPORT_REQUIRED_HEADERS = [
   PROJECT_INVENTORY_IMPORT.CSV_HEADERS.projectName,
