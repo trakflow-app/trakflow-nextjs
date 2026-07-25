@@ -79,4 +79,9 @@ export const projectInventoryImportText = {
   },
   materialNotesUnsupported:
     'Material notes are shown for review only and are not saved.',
+  skippedRowsNotice: {
+    tool: '{count} material rows were skipped on this page. Import materials from the Materials page.',
+    material:
+      '{count} tool rows were skipped on this page. Import tools from the Tools page.',
+  },
 } as const;

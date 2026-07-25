@@ -65,10 +65,13 @@ type ImportPreviewRow = {
 type CsvParseResult = {
   errors: string[];
   rows: ImportPreviewRow[];
+  skippedCount: number;
 };
 
 type ProjectInventoryImportDialogProps = {
   projects: ImportProjectOption[];
+  /** Restricts saved rows to this item type, matching which page (Tools or Materials) rendered the dialog. */
+  scope: ImportItemType;
 };
 
 const CSV_FILE_INPUT_ID = 'project-inventory-import-csv-file';
@@ -84,6 +87,7 @@ const ROW_ID_SEPARATOR = '-';
  */
 export function ProjectInventoryImportDialog({
   projects,
+  scope,
 }: ProjectInventoryImportDialogProps) {
   const router = useRouter();
   const csvInputRef = useRef<HTMLInputElement | null>(null);
@@ -93,16 +97,11 @@ export function ProjectInventoryImportDialog({
   const [ocrFileName, setOcrFileName] = useState('');
   const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [skippedCount, setSkippedCount] = useState(0);
   const [isExtracting, startExtractTransition] = useTransition();
   const [isSaving, startSaveTransition] = useTransition();
   const isBusy = isExtracting || isSaving;
 
-  const toolCount = previewRows.filter(
-    (row) => row.itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL,
-  ).length;
-  const materialCount = previewRows.filter(
-    (row) => row.itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.MATERIAL,
-  ).length;
   const detectedProjectName = previewRows[0]?.projectName ?? '';
   const matchedProject = useMemo(
     () =>
@@ -142,6 +141,7 @@ export function ProjectInventoryImportDialog({
 
     setCsvFileName(file.name);
     setOcrFileName('');
+    setSkippedCount(0);
 
     if (!isCsvFile(file)) {
       setPreviewRows([]);
@@ -151,9 +151,10 @@ export function ProjectInventoryImportDialog({
 
     try {
       const csvText = await file.text();
-      const result = parseInventoryCsv(csvText);
+      const result = parseInventoryCsv(csvText, scope);
       setPreviewRows(result.rows);
       setErrors(result.errors);
+      setSkippedCount(result.skippedCount);
     } catch {
       setPreviewRows([]);
       setErrors([projectInventoryImportText.errors.readFailed]);
@@ -173,6 +174,7 @@ export function ProjectInventoryImportDialog({
 
     setOcrFileName(file.name);
     setCsvFileName('');
+    setSkippedCount(0);
 
     if (!isOcrFile(file)) {
       setPreviewRows([]);
@@ -188,7 +190,10 @@ export function ProjectInventoryImportDialog({
 
     startExtractTransition(() => {
       void (async () => {
-        const result = await extractProjectInventoryFromDocument(formData);
+        const result = await extractProjectInventoryFromDocument(
+          formData,
+          scope,
+        );
 
         if (!result.draft) {
           setErrors([result.error]);
@@ -198,6 +203,7 @@ export function ProjectInventoryImportDialog({
         const parsed = buildPreviewRowsFromExtractionDraft(result.draft);
         setPreviewRows(parsed.rows);
         setErrors(parsed.errors);
+        setSkippedCount(0);
       })();
     });
   }
@@ -290,6 +296,7 @@ export function ProjectInventoryImportDialog({
     setOcrFileName('');
     setPreviewRows([]);
     setErrors([]);
+    setSkippedCount(0);
 
     if (csvInputRef.current) {
       csvInputRef.current.value = EMPTY_CELL;
@@ -426,6 +433,15 @@ export function ProjectInventoryImportDialog({
             </div>
           </div>
 
+          {skippedCount > 0 ? (
+            <div className="rounded-lg border bg-muted p-3 text-sm text-muted-foreground">
+              {projectInventoryImportText.skippedRowsNotice[scope].replace(
+                '{count}',
+                String(skippedCount),
+              )}
+            </div>
+          ) : null}
+
           {errors.length > 0 ? (
             <div className="flex flex-col gap-1 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
               {errors.map((error) => (
@@ -434,7 +450,7 @@ export function ProjectInventoryImportDialog({
             </div>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <ImportSummaryTile
               label={projectInventoryImportText.detectedProjectLabel}
               value={
@@ -450,12 +466,12 @@ export function ProjectInventoryImportDialog({
               }
             />
             <ImportSummaryTile
-              label={projectInventoryImportText.toolCountLabel}
-              value={String(toolCount)}
-            />
-            <ImportSummaryTile
-              label={projectInventoryImportText.materialCountLabel}
-              value={String(materialCount)}
+              label={
+                scope === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL
+                  ? projectInventoryImportText.toolCountLabel
+                  : projectInventoryImportText.materialCountLabel
+              }
+              value={String(previewRows.length)}
             />
           </div>
 
@@ -467,7 +483,7 @@ export function ProjectInventoryImportDialog({
               <p className="text-sm text-muted-foreground">
                 {previewRows.length === 0
                   ? projectInventoryImportText.saveDisabledMessage
-                  : materialCount > 0
+                  : scope === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.MATERIAL
                     ? projectInventoryImportText.materialNotesUnsupported
                     : null}
               </p>
@@ -548,9 +564,14 @@ export function ProjectInventoryImportDialog({
 }
 
 /**
- * Parses a CSV document into tool and material preview rows.
+ * Parses a CSV document into preview rows for the given scope (tool or material).
+ * Rows for the other item type are counted as skipped rather than validated,
+ * since they belong to the other page's import.
  */
-function parseInventoryCsv(csvText: string): CsvParseResult {
+function parseInventoryCsv(
+  csvText: string,
+  scope: ImportItemType,
+): CsvParseResult {
   const lines = csvText
     .split(CSV_SPLIT_PATTERN)
     .filter((line) => line.trim().length > 0);
@@ -559,6 +580,7 @@ function parseInventoryCsv(csvText: string): CsvParseResult {
     return {
       errors: [projectInventoryImportText.errors.emptyFile],
       rows: [],
+      skippedCount: 0,
     };
   }
 
@@ -576,27 +598,40 @@ function parseInventoryCsv(csvText: string): CsvParseResult {
         ),
       ],
       rows: [],
+      skippedCount: 0,
     };
   }
 
   const errors: string[] = [];
+  let skippedCount = 0;
   const rows = lines.slice(1).flatMap((line, index) => {
-    const row = mapCsvLineToPreviewRow(headers, parseCsvLine(line), index);
+    const result = mapCsvLineToPreviewRow(
+      headers,
+      parseCsvLine(line),
+      index,
+      scope,
+    );
 
-    if (!row.row) {
-      if (row.error) {
-        errors.push(row.error);
+    if (result.skipped) {
+      skippedCount += 1;
+      return [];
+    }
+
+    if (!result.row) {
+      if (result.error) {
+        errors.push(result.error);
       }
 
       return [];
     }
 
-    return [row.row];
+    return [result.row];
   });
 
   return {
     errors: buildPreviewErrors(errors),
     rows,
+    skippedCount,
   };
 }
 
@@ -638,13 +673,15 @@ function parseCsvLine(line: string): string[] {
 }
 
 /**
- * Converts a parsed CSV line into a preview row or validation error.
+ * Converts a parsed CSV line into a preview row, a validation error, or a
+ * skip when the row's item type does not match the dialog's scope.
  */
 function mapCsvLineToPreviewRow(
   headers: string[],
   cells: string[],
   rowIndex: number,
-): { error: string | null; row: ImportPreviewRow | null } {
+  scope: ImportItemType,
+): { error: string | null; row: ImportPreviewRow | null; skipped: boolean } {
   const csvRow = headers.reduce<Record<string, string>>(
     (result, header, index) => ({
       ...result,
@@ -661,6 +698,7 @@ function mapCsvLineToPreviewRow(
     return {
       error: projectInventoryImportText.errors.missingName,
       row: null,
+      skipped: false,
     };
   }
 
@@ -668,63 +706,77 @@ function mapCsvLineToPreviewRow(
     return {
       error: projectInventoryImportText.errors.unknownItemType,
       row: null,
+      skipped: false,
     };
   }
 
-  return buildPreviewRow({
-    itemType,
-    projectName:
-      csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.projectName]?.trim() ?? '',
-    name,
-    rawStatus: csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.status]?.trim() ?? '',
-    rawCondition:
-      csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.condition]?.trim() ?? '',
-    rawQuantity:
-      csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.quantity]?.trim() ?? '',
-    rawUnitCost:
-      csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.unitCost]?.trim() ?? '',
-    notes: csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.notes]?.trim() ?? '',
-    rowId: `${itemType}${ROW_ID_SEPARATOR}${rowIndex}`,
-  });
+  if (itemType !== scope) {
+    return { error: null, row: null, skipped: true };
+  }
+
+  return {
+    skipped: false,
+    ...buildPreviewRow({
+      itemType,
+      projectName:
+        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.projectName]?.trim() ?? '',
+      name,
+      rawStatus:
+        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.status]?.trim() ?? '',
+      rawCondition:
+        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.condition]?.trim() ?? '',
+      rawQuantity:
+        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.quantity]?.trim() ?? '',
+      rawUnitCost:
+        csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.unitCost]?.trim() ?? '',
+      notes: csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.notes]?.trim() ?? '',
+      rowId: `${itemType}${ROW_ID_SEPARATOR}${rowIndex}`,
+    }),
+  };
 }
 
 /**
  * Maps a Gemini extraction draft into preview rows, running every row through
- * the same normalization and validation the CSV path uses.
+ * the same normalization and validation the CSV path uses. The draft only ever
+ * carries the item type that was requested, so there's nothing to skip here.
  */
 function buildPreviewRowsFromExtractionDraft(
   draft: ProjectInventoryExtractionDraft,
-): CsvParseResult {
+): Omit<CsvParseResult, 'skippedCount'> {
   const errors: string[] = [];
   const rows: ImportPreviewRow[] = [];
   const projectName = draft.projectName?.trim() ?? '';
 
-  draft.tools.forEach((tool, index) => {
-    const name = tool.name?.trim() ?? '';
+  if (draft.itemType === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL) {
+    draft.tools.forEach((tool, index) => {
+      const name = tool.name?.trim() ?? '';
 
-    if (!name) {
-      errors.push(projectInventoryImportText.errors.missingName);
-      return;
-    }
+      if (!name) {
+        errors.push(projectInventoryImportText.errors.missingName);
+        return;
+      }
 
-    const result = buildPreviewRow({
-      itemType: PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL,
-      projectName,
-      name,
-      rawStatus: tool.status?.trim() ?? '',
-      rawCondition: tool.condition?.trim() ?? '',
-      rawQuantity: EMPTY_CELL,
-      rawUnitCost: EMPTY_CELL,
-      notes: tool.notes?.trim() ?? '',
-      rowId: `ocr-tool${ROW_ID_SEPARATOR}${index}`,
+      const result = buildPreviewRow({
+        itemType: PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL,
+        projectName,
+        name,
+        rawStatus: tool.status?.trim() ?? '',
+        rawCondition: tool.condition?.trim() ?? '',
+        rawQuantity: EMPTY_CELL,
+        rawUnitCost: EMPTY_CELL,
+        notes: tool.notes?.trim() ?? '',
+        rowId: `ocr-tool${ROW_ID_SEPARATOR}${index}`,
+      });
+
+      if (result.row) {
+        rows.push(result.row);
+      } else if (result.error) {
+        errors.push(result.error);
+      }
     });
 
-    if (result.row) {
-      rows.push(result.row);
-    } else if (result.error) {
-      errors.push(result.error);
-    }
-  });
+    return { errors: buildPreviewErrors(errors), rows };
+  }
 
   draft.materials.forEach((material, index) => {
     const name = material.name?.trim() ?? '';

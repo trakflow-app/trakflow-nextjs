@@ -221,6 +221,7 @@ export default async function ToolsPage({ searchParams }: ToolsPageProps) {
           {canManageToolRecords ? (
             <div className="flex flex-wrap items-center justify-end gap-2">
               <ProjectInventoryImportDialog
+                scope="tool"
                 projects={projects.map((project) => ({
                   id: project.id,
                   name: project.project_name,

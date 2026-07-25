@@ -7,6 +7,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
 import { requireOrgMember } from '@/lib/dal/auth';
+import { computeMergedMaterialQuantityAndCost } from '@/lib/materials/material-merge';
 import { createClient } from '@/lib/supabase/server';
 import { type MaterialUI } from '@/lib/types/materials-types';
 import { type Database } from '@/lib/types/database.types';
@@ -82,6 +83,86 @@ async function requireProjectInOrganization(
   }
 }
 
+const ILIKE_ESCAPE_PATTERN = /[%_\\]/g;
+
+/**
+ * Escapes ILIKE wildcard characters so a material name is matched literally.
+ */
+function escapeIlikePattern(value: string): string {
+  return value.replace(ILIKE_ESCAPE_PATTERN, (match) => `\\${match}`);
+}
+
+/**
+ * Adds stock to an existing material with the same name in the same project
+ * (or org inventory), or creates a new material if none exists. On merge,
+ * `unit_qty` is summed and `unit_cost` becomes the quantity-weighted average
+ * of the existing and incoming batches, so total inventory value stays
+ * consistent with what was actually added over time.
+ */
+export async function mergeOrCreateMaterial(
+  adminSupabase: SupabaseClient<Database>,
+  params: {
+    orgId: string;
+    projectId: string | null;
+    name: string;
+    quantity: number;
+    unitCost: number;
+    lowStockThreshold: number;
+  },
+) {
+  let existingQuery = adminSupabase
+    .from('materials')
+    .select('id, unit_qty, unit_cost')
+    .eq('org_id', params.orgId)
+    .ilike('name', escapeIlikePattern(params.name));
+
+  existingQuery = params.projectId
+    ? existingQuery.eq('project_id', params.projectId)
+    : existingQuery.is('project_id', null);
+
+  const { data: existing, error: findError } =
+    await existingQuery.maybeSingle();
+
+  if (findError) {
+    throw new Error(findError.message);
+  }
+
+  if (existing) {
+    const merged = computeMergedMaterialQuantityAndCost(
+      { unitQty: existing.unit_qty, unitCost: existing.unit_cost },
+      { quantity: params.quantity, unitCost: params.unitCost },
+    );
+
+    const { data, error } = await adminSupabase
+      .from('materials')
+      .update({ unit_qty: merged.quantity, unit_cost: merged.cost })
+      .eq('id', existing.id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    return data;
+  }
+
+  const { data, error } = await adminSupabase
+    .from('materials')
+    .insert({
+      org_id: params.orgId,
+      name: params.name,
+      project_id: params.projectId,
+      unit_qty: params.quantity,
+      unit_cost: params.unitCost,
+      low_stock_threshold: params.lowStockThreshold,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  return data;
+}
+
 /**
  * Function that record the log consumption of the materials
  */
@@ -124,20 +205,14 @@ export async function createMaterialAction(params: {
 
   await requireProjectInOrganization(adminSupabase, params.projectId, orgId);
 
-  const { data, error } = await adminSupabase
-    .from('materials')
-    .insert({
-      org_id: orgId,
-      name: params.name,
-      project_id: params.projectId || null,
-      unit_qty: params.quantity,
-      unit_cost: params.unitCost,
-      low_stock_threshold: params.lowStockThreshold,
-    })
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
+  const data = await mergeOrCreateMaterial(adminSupabase, {
+    orgId,
+    projectId: params.projectId || null,
+    name: params.name,
+    quantity: params.quantity,
+    unitCost: params.unitCost,
+    lowStockThreshold: params.lowStockThreshold,
+  });
 
   revalidatePath(MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH);
 

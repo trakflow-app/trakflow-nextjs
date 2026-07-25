@@ -13,6 +13,10 @@ import {
 } from '@/lib/validations/project-inventory-import-validations';
 import { TOOLS_MANAGEMENT } from '@/constants/components/tools/tools-constants';
 import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
+import {
+  computeMergedMaterialQuantityAndCost,
+  normalizeMaterialName,
+} from '@/lib/materials/material-merge';
 import type { Database } from '@/lib/types/database.types';
 
 type InventoryManagerRole = 'OWNER' | 'FOREMAN';
@@ -55,8 +59,8 @@ export type ImportRowResult = {
 export type ImportProjectInventoryResult = {
   error?: string;
   results?: ImportRowResult[];
-  toolsCreated?: number;
-  materialsCreated?: number;
+  toolsSaved?: number;
+  materialsSaved?: number;
 };
 
 /**
@@ -135,8 +139,8 @@ export async function importProjectInventoryAction(params: {
 
   const supabase = await createClient();
   const results: ImportRowResult[] = [];
-  let toolsCreated = 0;
-  let materialsCreated = 0;
+  let toolsSaved = 0;
+  let materialsSaved = 0;
 
   for (const toolRow of params.tools) {
     const parsed = importToolRowSchema.safeParse(toolRow);
@@ -173,44 +177,109 @@ export async function importProjectInventoryAction(params: {
       continue;
     }
 
-    toolsCreated += 1;
+    toolsSaved += 1;
     results.push({ id: toolRow.id, entity: 'tool', success: true });
   }
 
-  for (const materialRow of params.materials) {
-    const parsed = importMaterialRowSchema.safeParse(materialRow);
+  if (params.materials.length > 0) {
+    let existingMaterialsQuery = adminSupabase
+      .from('materials')
+      .select('id, name, unit_qty, unit_cost')
+      .eq('org_id', orgId);
 
-    if (!parsed.success) {
-      results.push({
-        id: materialRow.id,
-        entity: 'material',
-        success: false,
-        error: PROJECT_INVENTORY_IMPORT_ERRORS.invalidMaterialRow,
-      });
-      continue;
+    existingMaterialsQuery = params.projectId
+      ? existingMaterialsQuery.eq('project_id', params.projectId)
+      : existingMaterialsQuery.is('project_id', null);
+
+    const { data: existingMaterialRows, error: existingMaterialsError } =
+      await existingMaterialsQuery;
+
+    if (existingMaterialsError) {
+      return { error: existingMaterialsError.message };
     }
 
-    const { error } = await adminSupabase.from('materials').insert({
-      org_id: orgId,
-      name: parsed.data.name,
-      project_id: params.projectId,
-      unit_qty: parsed.data.quantity,
-      unit_cost: parsed.data.unitCost,
-      low_stock_threshold: parsed.data.lowStockThreshold,
-    });
+    // Keyed by normalized name and kept up to date as rows are saved, so two
+    // rows with the same name in one CSV/OCR batch merge into each other too.
+    const materialsByName = new Map<
+      string,
+      { id: string; unitQty: number; unitCost: number }
+    >(
+      (existingMaterialRows ?? []).map((row) => [
+        normalizeMaterialName(row.name),
+        { id: row.id, unitQty: row.unit_qty, unitCost: row.unit_cost },
+      ]),
+    );
 
-    if (error) {
-      results.push({
-        id: materialRow.id,
-        entity: 'material',
-        success: false,
-        error: error.message,
-      });
-      continue;
+    for (const materialRow of params.materials) {
+      const parsed = importMaterialRowSchema.safeParse(materialRow);
+
+      if (!parsed.success) {
+        results.push({
+          id: materialRow.id,
+          entity: 'material',
+          success: false,
+          error: PROJECT_INVENTORY_IMPORT_ERRORS.invalidMaterialRow,
+        });
+        continue;
+      }
+
+      const nameKey = normalizeMaterialName(parsed.data.name);
+      const existing = materialsByName.get(nameKey);
+
+      try {
+        if (existing) {
+          const merged = computeMergedMaterialQuantityAndCost(
+            { unitQty: existing.unitQty, unitCost: existing.unitCost },
+            { quantity: parsed.data.quantity, unitCost: parsed.data.unitCost },
+          );
+
+          const { error } = await adminSupabase
+            .from('materials')
+            .update({ unit_qty: merged.quantity, unit_cost: merged.cost })
+            .eq('id', existing.id);
+
+          if (error) throw new Error(error.message);
+
+          materialsByName.set(nameKey, {
+            id: existing.id,
+            unitQty: merged.quantity,
+            unitCost: merged.cost,
+          });
+        } else {
+          const { data, error } = await adminSupabase
+            .from('materials')
+            .insert({
+              org_id: orgId,
+              name: parsed.data.name,
+              project_id: params.projectId,
+              unit_qty: parsed.data.quantity,
+              unit_cost: parsed.data.unitCost,
+              low_stock_threshold: parsed.data.lowStockThreshold,
+            })
+            .select('id, unit_qty, unit_cost')
+            .single();
+
+          if (error) throw new Error(error.message);
+
+          materialsByName.set(nameKey, {
+            id: data.id,
+            unitQty: data.unit_qty,
+            unitCost: data.unit_cost,
+          });
+        }
+      } catch (error) {
+        results.push({
+          id: materialRow.id,
+          entity: 'material',
+          success: false,
+          error: error instanceof Error ? error.message : 'Could not be saved.',
+        });
+        continue;
+      }
+
+      materialsSaved += 1;
+      results.push({ id: materialRow.id, entity: 'material', success: true });
     }
-
-    materialsCreated += 1;
-    results.push({ id: materialRow.id, entity: 'material', success: true });
   }
 
   revalidatePath(TOOLS_MANAGEMENT.ROUTES.TOOLS_PATH);
@@ -220,5 +289,5 @@ export async function importProjectInventoryAction(params: {
     revalidatePath(`/projects/${params.projectId}`);
   }
 
-  return { results, toolsCreated, materialsCreated };
+  return { results, toolsSaved, materialsSaved };
 }

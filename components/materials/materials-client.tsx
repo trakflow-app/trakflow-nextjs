@@ -287,7 +287,10 @@ export function MaterialsClient({
           </div>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <ProjectInventoryImportDialog projects={orgProjects} />
+            <ProjectInventoryImportDialog
+              scope="material"
+              projects={orgProjects}
+            />
             <Button onClick={() => setAddModalOpen(true)}>
               <Plus data-icon="inline-start" />
               {materialsPage.addMaterialButton}
