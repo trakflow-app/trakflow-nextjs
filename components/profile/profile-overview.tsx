@@ -39,13 +39,13 @@ export function ProfileOverview({
   const capabilityKeys = PROFILE_ROLE_CAPABILITY_KEYS[role];
 
   return (
-    <main className="bg-muted/30 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto flex max-w-5xl flex-col gap-8">
+    <main className="min-h-screen bg-background px-6 py-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight">
             {PROFILE_TEXT.pageTitle}
           </h1>
-          <p className="mt-2 text-muted-foreground">
+          <p className="mt-1 text-sm text-muted-foreground">
             {PROFILE_TEXT.pageSubtitle}
           </p>
         </div>
