@@ -877,7 +877,8 @@ function resolveRowProject(
   }
 
   const match = projects.find(
-    (project) => normalizeCsvValue(project.name) === normalizeCsvValue(trimmedName),
+    (project) =>
+      normalizeCsvValue(project.name) === normalizeCsvValue(trimmedName),
   );
 
   return match
