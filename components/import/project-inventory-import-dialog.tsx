@@ -68,6 +68,10 @@ type ImportPreviewRow = {
   id: string;
   itemType: ImportItemType;
   projectName: string;
+  /** Resolved from projectName against the caller's project list; null means org inventory or unmatched. */
+  projectId: string | null;
+  /** False when projectName is non-empty but did not match a known project. */
+  projectMatched: boolean;
   name: string;
   quantity: string;
   unitCost: string;
@@ -124,15 +128,20 @@ export function ProjectInventoryImportDialog({
   );
   const needsFixCount = previewRows.length - readyRows.length;
 
-  const detectedProjectName = previewRows[0]?.projectName ?? '';
-  const matchedProject = useMemo(
+  const detectedProjectNames = useMemo(
     () =>
-      projects.find(
-        (project) =>
-          normalizeCsvValue(project.name) ===
-          normalizeCsvValue(detectedProjectName),
+      Array.from(
+        new Set(
+          previewRows.map((row) => row.projectName.trim()).filter(Boolean),
+        ),
       ),
-    [detectedProjectName, projects],
+    [previewRows],
+  );
+  const unmatchedProjectCount = useMemo(
+    () =>
+      previewRows.filter((row) => row.projectName.trim() && !row.projectMatched)
+        .length,
+    [previewRows],
   );
 
   /**
@@ -173,7 +182,7 @@ export function ProjectInventoryImportDialog({
 
     try {
       const csvText = await file.text();
-      const result = parseInventoryCsv(csvText, scope);
+      const result = parseInventoryCsv(csvText, scope, projects);
       setPreviewRows(result.rows);
       setErrors(result.errors);
       setSkippedCount(result.skippedCount);
@@ -222,7 +231,9 @@ export function ProjectInventoryImportDialog({
           return;
         }
 
-        setPreviewRows(buildPreviewRowsFromExtractionDraft(result.draft));
+        setPreviewRows(
+          buildPreviewRowsFromExtractionDraft(result.draft, projects),
+        );
         setErrors([]);
         setSkippedCount(0);
       })();
@@ -281,6 +292,7 @@ export function ProjectInventoryImportDialog({
       )
       .map((row) => ({
         id: row.id,
+        projectId: row.projectId,
         name: row.name,
         status: row.status,
         condition: row.condition,
@@ -292,6 +304,7 @@ export function ProjectInventoryImportDialog({
       )
       .map((row) => ({
         id: row.id,
+        projectId: row.projectId,
         name: row.name,
         quantity: Number(row.quantity),
         unitCost: Number(row.unitCost),
@@ -300,7 +313,6 @@ export function ProjectInventoryImportDialog({
     startSaveTransition(() => {
       void (async () => {
         const result = await importProjectInventoryAction({
-          projectId: matchedProject?.id ?? null,
           tools: toolsPayload,
           materials: materialsPayload,
         });
@@ -534,15 +546,26 @@ export function ProjectInventoryImportDialog({
               <ImportSummaryTile
                 label={projectInventoryImportText.detectedProjectLabel}
                 value={
-                  detectedProjectName ||
-                  projectInventoryImportText.noProjectDetected
+                  detectedProjectNames.length === 0
+                    ? projectInventoryImportText.noProjectDetected
+                    : detectedProjectNames.length === 1
+                      ? detectedProjectNames[0]
+                      : projectInventoryImportText.multipleProjectsDetected.replace(
+                          '{count}',
+                          String(detectedProjectNames.length),
+                        )
                 }
               />
               <ImportSummaryTile
                 label={projectInventoryImportText.matchedProjectLabel}
                 value={
-                  matchedProject?.name ??
-                  projectInventoryImportText.noProjectMatch
+                  unmatchedProjectCount > 0
+                    ? projectInventoryImportText.unmatchedProjectsCount.replace(
+                        '{count}',
+                        String(unmatchedProjectCount),
+                      )
+                    : (detectedProjectNames[0] ??
+                      projectInventoryImportText.noProjectMatch)
                 }
               />
               <ImportSummaryTile
@@ -618,6 +641,7 @@ export function ProjectInventoryImportDialog({
 function parseInventoryCsv(
   csvText: string,
   scope: ImportItemType,
+  projects: ImportProjectOption[],
 ): CsvParseResult {
   const lines = csvText
     .split(CSV_SPLIT_PATTERN)
@@ -657,6 +681,7 @@ function parseInventoryCsv(
       parseCsvLine(line),
       index,
       scope,
+      projects,
     );
 
     if (result.skipped) {
@@ -730,6 +755,7 @@ function mapCsvLineToPreviewRow(
   cells: string[],
   rowIndex: number,
   scope: ImportItemType,
+  projects: ImportProjectOption[],
 ): { error: string | null; row: ImportPreviewRow | null; skipped: boolean } {
   const csvRow = headers.reduce<Record<string, string>>(
     (result, header, index) => ({
@@ -772,6 +798,7 @@ function mapCsvLineToPreviewRow(
         csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.unitCost]?.trim() ?? '',
       notes: csvRow[PROJECT_INVENTORY_IMPORT.CSV_HEADERS.notes]?.trim() ?? '',
       rowId: `${itemType}${ROW_ID_SEPARATOR}${rowIndex}`,
+      projects,
     }),
   };
 }
@@ -784,6 +811,7 @@ function mapCsvLineToPreviewRow(
  */
 function buildPreviewRowsFromExtractionDraft(
   draft: ProjectInventoryExtractionDraft,
+  projects: ImportProjectOption[],
 ): ImportPreviewRow[] {
   const projectName = draft.projectName?.trim() ?? '';
 
@@ -799,6 +827,7 @@ function buildPreviewRowsFromExtractionDraft(
         rawUnitCost: EMPTY_CELL,
         notes: tool.notes?.trim() ?? '',
         rowId: `ocr-tool${ROW_ID_SEPARATOR}${index}`,
+        projects,
       }),
     );
   }
@@ -814,6 +843,7 @@ function buildPreviewRowsFromExtractionDraft(
       rawUnitCost: material.unitCost != null ? String(material.unitCost) : '',
       notes: material.notes?.trim() ?? '',
       rowId: `ocr-material${ROW_ID_SEPARATOR}${index}`,
+      projects,
     }),
   );
 }
@@ -828,7 +858,32 @@ type BuildPreviewRowInput = {
   rawUnitCost: string;
   notes: string;
   rowId: string;
+  projects: ImportProjectOption[];
 };
+
+/**
+ * Resolves a raw project name to a known project, case/whitespace-insensitively.
+ * An empty name resolves to org inventory (matched); a non-empty name with no
+ * match is left unmatched so the row is blocked until the user fixes it.
+ */
+function resolveRowProject(
+  projectName: string,
+  projects: ImportProjectOption[],
+): { projectId: string | null; projectMatched: boolean } {
+  const trimmedName = projectName.trim();
+
+  if (!trimmedName) {
+    return { projectId: null, projectMatched: true };
+  }
+
+  const match = projects.find(
+    (project) => normalizeCsvValue(project.name) === normalizeCsvValue(trimmedName),
+  );
+
+  return match
+    ? { projectId: match.id, projectMatched: true }
+    : { projectId: null, projectMatched: false };
+}
 
 /**
  * Normalizes a single draft row into a preview row. The row is always
@@ -847,12 +902,20 @@ function buildPreviewRow(input: BuildPreviewRowInput): ImportPreviewRow {
     rawUnitCost,
     notes,
     rowId,
+    projects,
   } = input;
+
+  const { projectId, projectMatched } = resolveRowProject(
+    projectName,
+    projects,
+  );
 
   const baseRow = {
     id: rowId,
     itemType,
     projectName,
+    projectId,
+    projectMatched,
     name,
     notes,
   };
@@ -888,6 +951,10 @@ function buildPreviewRow(input: BuildPreviewRowInput): ImportPreviewRow {
  * shared by initial parsing and by inline edits in the preview table.
  */
 function validateRow(row: ImportPreviewRow): string | null {
+  if (!row.projectMatched) {
+    return projectInventoryImportText.errors.unmatchedProject;
+  }
+
   if (!row.name.trim()) {
     return projectInventoryImportText.errors.missingName;
   }

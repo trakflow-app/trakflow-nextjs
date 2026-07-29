@@ -26,6 +26,8 @@ export const projectInventoryImportText = {
   matchedProjectLabel: 'Existing project match',
   noProjectDetected: 'No project detected',
   noProjectMatch: 'No existing project matched',
+  multipleProjectsDetected: '{count} projects detected',
+  unmatchedProjectsCount: '{count} rows need a project match',
   toolCountLabel: 'Tools',
   materialCountLabel: 'Materials',
   previewTitle: 'Review rows',
@@ -56,6 +58,8 @@ export const projectInventoryImportText = {
     emptyFile: 'The spreadsheet does not contain any rows.',
     invalidRows: '{count} rows could not be read and were left out.',
     unknownItemType: 'Use tool or material for item_type.',
+    unmatchedProject:
+      'This project name does not match an existing project. Fix the spelling or leave it blank for organization inventory.',
     missingName: 'Enter a name.',
     unknownToolStatus: 'Status must be Available, Out of Service, or Archived.',
     unknownToolCondition:

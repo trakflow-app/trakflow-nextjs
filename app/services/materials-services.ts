@@ -7,7 +7,6 @@ import {
 import { revalidatePath } from 'next/cache';
 import { MATERIALS_MANAGEMENT } from '@/constants/components/materials/materials-constants';
 import { requireOrgMember } from '@/lib/dal/auth';
-import { computeMergedMaterialQuantityAndCost } from '@/lib/materials/material-merge';
 import { createClient } from '@/lib/supabase/server';
 import { type MaterialUI } from '@/lib/types/materials-types';
 import { type Database } from '@/lib/types/database.types';
@@ -83,80 +82,29 @@ async function requireProjectInOrganization(
   }
 }
 
-const ILIKE_ESCAPE_PATTERN = /[%_\\]/g;
-
-/**
- * Escapes ILIKE wildcard characters so a material name is matched literally.
- */
-function escapeIlikePattern(value: string): string {
-  return value.replace(ILIKE_ESCAPE_PATTERN, (match) => `\\${match}`);
-}
-
 /**
  * Adds stock to an existing material with the same name in the same project
- * (or org inventory), or creates a new material if none exists. On merge,
- * `unit_qty` is summed and `unit_cost` becomes the quantity-weighted average
- * of the existing and incoming batches, so total inventory value stays
- * consistent with what was actually added over time.
+ * (or org inventory), or creates a new material if none exists, via the
+ * `merge_or_create_material` RPC. The merge (summing `unit_qty`, averaging
+ * `unit_cost` by quantity) happens atomically in Postgres so two concurrent
+ * calls for the same material can't silently overwrite each other.
  */
-export async function mergeOrCreateMaterial(
-  adminSupabase: SupabaseClient<Database>,
-  params: {
-    orgId: string;
-    projectId: string | null;
-    name: string;
-    quantity: number;
-    unitCost: number;
-    lowStockThreshold: number;
-  },
-) {
-  let existingQuery = adminSupabase
-    .from('materials')
-    .select('id, unit_qty, unit_cost')
-    .eq('org_id', params.orgId)
-    .ilike('name', escapeIlikePattern(params.name));
+export async function mergeOrCreateMaterial(params: {
+  projectId: string | null;
+  name: string;
+  quantity: number;
+  unitCost: number;
+  lowStockThreshold: number;
+}) {
+  const supabase = await createClient();
 
-  existingQuery = params.projectId
-    ? existingQuery.eq('project_id', params.projectId)
-    : existingQuery.is('project_id', null);
-
-  const { data: existing, error: findError } =
-    await existingQuery.maybeSingle();
-
-  if (findError) {
-    throw new Error(findError.message);
-  }
-
-  if (existing) {
-    const merged = computeMergedMaterialQuantityAndCost(
-      { unitQty: existing.unit_qty, unitCost: existing.unit_cost },
-      { quantity: params.quantity, unitCost: params.unitCost },
-    );
-
-    const { data, error } = await adminSupabase
-      .from('materials')
-      .update({ unit_qty: merged.quantity, unit_cost: merged.cost })
-      .eq('id', existing.id)
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
-
-    return data;
-  }
-
-  const { data, error } = await adminSupabase
-    .from('materials')
-    .insert({
-      org_id: params.orgId,
-      name: params.name,
-      project_id: params.projectId,
-      unit_qty: params.quantity,
-      unit_cost: params.unitCost,
-      low_stock_threshold: params.lowStockThreshold,
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('merge_or_create_material', {
+    p_project_id: params.projectId,
+    p_name: params.name,
+    p_quantity: params.quantity,
+    p_unit_cost: params.unitCost,
+    p_low_stock_threshold: params.lowStockThreshold,
+  });
 
   if (error) throw new Error(error.message);
 
@@ -200,13 +148,9 @@ export async function createMaterialAction(params: {
   unitCost: number;
   lowStockThreshold: number;
 }) {
-  const orgId = await requireMaterialManager(params.orgId);
-  const adminSupabase = createAdminClient();
+  await requireMaterialManager(params.orgId);
 
-  await requireProjectInOrganization(adminSupabase, params.projectId, orgId);
-
-  const data = await mergeOrCreateMaterial(adminSupabase, {
-    orgId,
+  const data = await mergeOrCreateMaterial({
     projectId: params.projectId || null,
     name: params.name,
     quantity: params.quantity,
