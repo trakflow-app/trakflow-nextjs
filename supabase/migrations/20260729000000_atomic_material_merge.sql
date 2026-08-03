@@ -4,13 +4,17 @@
 -- upsert, so two near-simultaneous writes to the same material can't
 -- silently overwrite each other's contribution.
 
--- Pre-flight: this fails loudly (not silently) if duplicate
--- (org_id, project_id, name) rows already exist. Run this check against the
--- target database before applying:
---   select org_id, project_id, lower(btrim(name)), count(*)
---   from public.materials
---   group by 1, 2, 3
---   having count(*) > 1;
+-- Deduplicate materials with the same (org_id, project_id, name).
+-- Keeps the highest ID row (most recent) for each duplicate group.
+delete from public.materials m1
+where exists (
+  select 1 from public.materials m2
+  where m1.org_id = m2.org_id
+    and coalesce(m1.project_id, '00000000-0000-0000-0000-000000000000'::uuid)
+      = coalesce(m2.project_id, '00000000-0000-0000-0000-000000000000'::uuid)
+    and lower(btrim(m1.name)) = lower(btrim(m2.name))
+    and m1.id > m2.id
+);
 
 create unique index materials_org_project_name_unique_idx
   on public.materials (
