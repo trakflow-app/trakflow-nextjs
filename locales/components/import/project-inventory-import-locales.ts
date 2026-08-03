@@ -50,6 +50,8 @@ export const projectInventoryImportText = {
   },
   statusPlaceholder: 'Select status',
   conditionPlaceholder: 'Select condition',
+  organizationInventory: 'Organization inventory',
+  selectProjectPlaceholder: 'Select a project',
   errors: {
     unsupportedFile: 'Upload a spreadsheet (CSV) file.',
     unsupportedOcrFile: 'Upload a PDF or image file.',

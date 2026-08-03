@@ -264,7 +264,7 @@ export function ProjectInventoryImportDialog({
     patch: Partial<
       Pick<
         ImportPreviewRow,
-        'name' | 'status' | 'condition' | 'quantity' | 'unitCost'
+        'name' | 'status' | 'condition' | 'quantity' | 'unitCost' | 'projectId'
       >
     >,
   ) {
@@ -275,6 +275,9 @@ export function ProjectInventoryImportDialog({
         }
 
         const nextRow = { ...row, ...patch };
+        if (patch.projectId !== undefined) {
+          nextRow.projectMatched = true;
+        }
         return { ...nextRow, rowError: validateRow(nextRow) };
       }),
     );
@@ -1205,8 +1208,29 @@ function PreviewTable({
                 </span>
               </div>
             </TableCell>
-            <TableCell className="text-sm text-muted-foreground">
-              {row.projectName}
+            <TableCell>
+              <SelectField
+                options={[
+                  {
+                    value: '',
+                    label: projectInventoryImportText.organizationInventory,
+                  },
+                  ...projects.map((p) => ({
+                    value: p.id,
+                    label: p.name,
+                  })),
+                ]}
+                value={row.projectId || ''}
+                placeholder={
+                  projectInventoryImportText.selectProjectPlaceholder
+                }
+                disabled={disabled}
+                onChange={(value) =>
+                  onRowFieldChange(row.id, {
+                    projectId: value || null,
+                  })
+                }
+              />
             </TableCell>
             <TableCell>
               <Input
