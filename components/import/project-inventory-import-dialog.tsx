@@ -96,7 +96,6 @@ type ProjectInventoryImportDialogProps = {
 
 const CSV_FILE_INPUT_ID = 'project-inventory-import-csv-file';
 const OCR_FILE_INPUT_ID = 'project-inventory-import-ocr-file';
-const CSV_SPLIT_PATTERN = /\r?\n/;
 const CSV_QUOTE = '"';
 const CSV_CELL_SEPARATOR = ',';
 const EMPTY_CELL = '';
@@ -599,6 +598,7 @@ export function ProjectInventoryImportDialog({
                 rows={previewRows}
                 scope={scope}
                 disabled={isBusy}
+                projects={projects}
                 onRowFieldChange={handleRowFieldChange}
               />
             ) : (
@@ -637,6 +637,52 @@ export function ProjectInventoryImportDialog({
 }
 
 /**
+ * Splits CSV text into lines while respecting quoted fields.
+ * Only splits on newlines that are outside of quotes.
+ */
+function splitCsvLines(csvText: string): string[] {
+  const lines: string[] = [];
+  let currentLine = '';
+  let isInsideQuote = false;
+
+  for (let i = 0; i < csvText.length; i += 1) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
+
+    if (char === CSV_QUOTE && nextChar === CSV_QUOTE) {
+      currentLine += CSV_QUOTE;
+      i += 1;
+      continue;
+    }
+
+    if (char === CSV_QUOTE) {
+      isInsideQuote = !isInsideQuote;
+      currentLine += char;
+      continue;
+    }
+
+    if ((char === '\r' || char === '\n') && !isInsideQuote) {
+      if (currentLine.trim().length > 0) {
+        lines.push(currentLine);
+      }
+      currentLine = '';
+      if (char === '\r' && nextChar === '\n') {
+        i += 1;
+      }
+      continue;
+    }
+
+    currentLine += char;
+  }
+
+  if (currentLine.trim().length > 0) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+/**
  * Parses a CSV document into preview rows for the given scope (tool or material).
  * Rows for the other item type are counted as skipped rather than validated,
  * since they belong to the other page's import.
@@ -646,9 +692,7 @@ function parseInventoryCsv(
   scope: ImportItemType,
   projects: ImportProjectOption[],
 ): CsvParseResult {
-  const lines = csvText
-    .split(CSV_SPLIT_PATTERN)
-    .filter((line) => line.trim().length > 0);
+  const lines = splitCsvLines(csvText);
 
   if (lines.length <= 1) {
     return {
@@ -1128,12 +1172,13 @@ type PreviewTableProps = {
   rows: ImportPreviewRow[];
   scope: ImportItemType;
   disabled: boolean;
+  projects: ImportProjectOption[];
   onRowFieldChange: (
     rowId: string,
     patch: Partial<
       Pick<
         ImportPreviewRow,
-        'name' | 'status' | 'condition' | 'quantity' | 'unitCost'
+        'name' | 'status' | 'condition' | 'quantity' | 'unitCost' | 'projectId'
       >
     >,
   ) => void;
@@ -1148,6 +1193,7 @@ function PreviewTable({
   rows,
   scope,
   disabled,
+  projects,
   onRowFieldChange,
 }: PreviewTableProps) {
   const isToolScope = scope === PROJECT_INVENTORY_IMPORT.ITEM_TYPES.TOOL;
