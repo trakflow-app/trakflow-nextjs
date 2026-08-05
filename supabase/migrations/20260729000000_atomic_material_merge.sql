@@ -84,9 +84,13 @@ begin
   do update set
     unit_qty = public.materials.unit_qty + excluded.unit_qty,
     unit_cost = round(
-      (public.materials.unit_qty * public.materials.unit_cost
-        + excluded.unit_qty * excluded.unit_cost)
-      / nullif(public.materials.unit_qty + excluded.unit_qty, 0),
+      case
+        when public.materials.unit_qty + excluded.unit_qty = 0
+        then public.materials.unit_cost
+        else (public.materials.unit_qty * public.materials.unit_cost
+          + excluded.unit_qty * excluded.unit_cost)
+          / (public.materials.unit_qty + excluded.unit_qty)
+      end,
       2
     )
   returning * into result_row;
