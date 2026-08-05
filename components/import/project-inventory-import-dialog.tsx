@@ -649,12 +649,6 @@ function splitCsvLines(csvText: string): string[] {
     const char = csvText[i];
     const nextChar = csvText[i + 1];
 
-    if (char === CSV_QUOTE && nextChar === CSV_QUOTE) {
-      currentLine += CSV_QUOTE;
-      i += 1;
-      continue;
-    }
-
     if (char === CSV_QUOTE) {
       isInsideQuote = !isInsideQuote;
       currentLine += char;

@@ -40,7 +40,7 @@ begin
 
     for i in 2..array_length(v_dup_group.ids, 1) loop
       v_del_id := v_dup_group.ids[i];
-      update public.material_usages
+      update public.material_usage
       set material_id = v_keep_id
       where material_id = v_del_id;
 
