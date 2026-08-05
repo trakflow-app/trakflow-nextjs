@@ -5,16 +5,49 @@
 -- silently overwrite each other's contribution.
 
 -- Deduplicate materials with the same (org_id, project_id, name).
--- Keeps the highest ID row (most recent) for each duplicate group.
-delete from public.materials m1
-where exists (
-  select 1 from public.materials m2
-  where m1.org_id = m2.org_id
-    and coalesce(m1.project_id, '00000000-0000-0000-0000-000000000000'::uuid)
-      = coalesce(m2.project_id, '00000000-0000-0000-0000-000000000000'::uuid)
-    and lower(btrim(m1.name)) = lower(btrim(m2.name))
-    and m1.id > m2.id
-);
+-- Aggregates quantities, recalculates costs, and repoints usage records.
+do $$
+declare
+  v_dup_group record;
+  v_keep_id uuid;
+  v_del_id uuid;
+begin
+  for v_dup_group in
+    select
+      org_id,
+      project_id,
+      lower(btrim(name)) as name_normalized,
+      array_agg(id order by id) as ids,
+      sum(unit_qty) as total_qty,
+      case
+        when sum(unit_qty) > 0
+        then round(sum(unit_qty * unit_cost) / sum(unit_qty), 2)
+        else (array_agg(unit_cost order by id))[1]
+      end as avg_cost,
+      min(low_stock_threshold) as min_threshold
+    from public.materials
+    group by 1, 2, 3
+    having count(*) > 1
+  loop
+    v_keep_id := v_dup_group.ids[1];
+
+    update public.materials
+    set
+      unit_qty = v_dup_group.total_qty,
+      unit_cost = v_dup_group.avg_cost,
+      low_stock_threshold = v_dup_group.min_threshold
+    where id = v_keep_id;
+
+    for i in 2..array_length(v_dup_group.ids, 1) loop
+      v_del_id := v_dup_group.ids[i];
+      update public.material_usages
+      set material_id = v_keep_id
+      where material_id = v_del_id;
+
+      delete from public.materials where id = v_del_id;
+    end loop;
+  end loop;
+end $$;
 
 create unique index materials_org_project_name_unique_idx
   on public.materials (

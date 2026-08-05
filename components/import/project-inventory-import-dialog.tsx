@@ -923,14 +923,20 @@ function resolveRowProject(
     return { projectId: null, projectMatched: true };
   }
 
-  const match = projects.find(
+  const matches = projects.filter(
     (project) =>
       normalizeCsvValue(project.name) === normalizeCsvValue(trimmedName),
   );
 
-  return match
-    ? { projectId: match.id, projectMatched: true }
-    : { projectId: null, projectMatched: false };
+  if (matches.length === 1) {
+    return { projectId: matches[0].id, projectMatched: true };
+  }
+
+  if (matches.length > 1) {
+    return { projectId: null, projectMatched: false };
+  }
+
+  return { projectId: null, projectMatched: false };
 }
 
 /**
