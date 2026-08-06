@@ -355,7 +355,9 @@ export function ProjectInventoryImportDialog({
 
         const failedIds = new Set(failedResults.map((row) => row.id));
         setPreviewRows((rows) =>
-          rows.filter((row) => failedIds.has(row.id) || !succeededIds.has(row.id)),
+          rows.filter(
+            (row) => failedIds.has(row.id) || !succeededIds.has(row.id),
+          ),
         );
         setErrors(
           failedResults.map(
