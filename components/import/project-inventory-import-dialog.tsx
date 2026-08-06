@@ -327,6 +327,9 @@ export function ProjectInventoryImportDialog({
         const rowResults = result.results ?? [];
         const failedResults = rowResults.filter((row) => !row.success);
         const succeededCount = rowResults.length - failedResults.length;
+        const succeededIds = new Set(
+          rowResults.filter((row) => row.success).map((row) => row.id),
+        );
 
         if (failedResults.length === 0) {
           showToast(
@@ -336,14 +339,24 @@ export function ProjectInventoryImportDialog({
             ),
             'success',
           );
-          resetPreview();
-          setOpen(false);
+          setPreviewRows((rows) =>
+            rows.filter((row) => !succeededIds.has(row.id)),
+          );
+          setErrors([]);
+          const remainingRows = previewRows.filter(
+            (row) => !succeededIds.has(row.id),
+          );
+          if (remainingRows.length === 0) {
+            setOpen(false);
+          }
           router.refresh();
           return;
         }
 
         const failedIds = new Set(failedResults.map((row) => row.id));
-        setPreviewRows((rows) => rows.filter((row) => failedIds.has(row.id)));
+        setPreviewRows((rows) =>
+          rows.filter((row) => failedIds.has(row.id) || !succeededIds.has(row.id)),
+        );
         setErrors(
           failedResults.map(
             (row) =>
