@@ -671,6 +671,16 @@ export type Database = {
         }
         Returns: string
       }
+      merge_or_create_material: {
+        Args: {
+          p_low_stock_threshold?: number
+          p_name: string
+          p_project_id: string | null
+          p_quantity: number
+          p_unit_cost: number
+        }
+        Returns: Database["public"]["Tables"]["materials"]["Row"]
+      }
       regenerate_join_code: { Args: never; Returns: string }
       return_tool: {
         Args: {

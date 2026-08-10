@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { ProjectInventoryImportDialog } from '@/components/import/project-inventory-import-dialog';
 import { ToolCreateButton } from '@/components/tools/tool-create-button';
 import { ToolsList } from '@/components/tools/tools-list';
 import { ToolsStatsGrid } from '@/components/tools/tools-stats-grid';
@@ -218,7 +219,16 @@ export default async function ToolsPage({ searchParams }: ToolsPageProps) {
             </p>
           </div>
           {canManageToolRecords ? (
-            <ToolCreateButton projects={projects} />
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <ProjectInventoryImportDialog
+                scope="tool"
+                projects={projects.map((project) => ({
+                  id: project.id,
+                  name: project.project_name,
+                }))}
+              />
+              <ToolCreateButton projects={projects} />
+            </div>
           ) : null}
         </div>
 

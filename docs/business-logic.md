@@ -48,6 +48,16 @@ Materials represent inventory that can belong to the organization or to a specif
 - Project-specific materials can only be consumed by their assigned project.
 - Material usage is immutable history and is written through the `log_material_usage` database function.
 
+### Adding materials with the same name never creates duplicates
+
+Whether a material is added manually or through CSV/OCR import, adding a material with a name that already exists **in the same place** (same organization, and same project or same org inventory) does not create a second row — it adds to the existing one instead.
+
+- Two materials are considered "the same" when their name matches (case and extra whitespace ignored) and they live in the same place: same project, or both unassigned to a project (org inventory). The same name in two different projects is not the same material.
+- When it matches, the quantity being added is summed onto the existing quantity.
+- The unit cost becomes a **quantity-weighted average** of the existing stock and the newly added stock — not a simple overwrite, and not a plain average. Example: 50 units already in stock at $4.00, and 70 more units come in at $4.50 → the new unit cost is `(50 × 4.00 + 70 × 4.50) / 120 = $4.29`, and the total value of the stock (`unit_qty × unit_cost`) stays consistent with what was actually paid for it over time.
+- The low-stock threshold is left untouched when merging — it's a policy someone set on purpose, not something that should reset just because more stock arrived. It's only used when a material is first created.
+- This is enforced by the database itself (`merge_or_create_material`, `supabase/migrations/20260725000000_atomic_material_merge.sql`), not just application code, so it stays correct even if two people add the same material at the same time — the database processes both additions atomically instead of one silently overwriting the other.
+
 ## Tools
 
 Tools represent reusable equipment owned by an organization.

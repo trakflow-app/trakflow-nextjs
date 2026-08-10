@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ProjectInventoryImportDialog } from '@/components/import/project-inventory-import-dialog';
 import { Button } from '@/components/ui/button';
 import { SelectField, type SelectOption } from '@/components/ui/select-field';
 import StatsGrid from '@/components/materials/StatsGrid';
@@ -285,10 +286,16 @@ export function MaterialsClient({
             </p>
           </div>
 
-          <Button onClick={() => setAddModalOpen(true)}>
-            <Plus />
-            {materialsPage.addMaterialButton}
-          </Button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <ProjectInventoryImportDialog
+              scope="material"
+              projects={orgProjects}
+            />
+            <Button onClick={() => setAddModalOpen(true)}>
+              <Plus data-icon="inline-start" />
+              {materialsPage.addMaterialButton}
+            </Button>
+          </div>
         </div>
 
         <StatsGrid stats={materialStats} />

@@ -83,6 +83,35 @@ async function requireProjectInOrganization(
 }
 
 /**
+ * Adds stock to an existing material with the same name in the same project
+ * (or org inventory), or creates a new material if none exists, via the
+ * `merge_or_create_material` RPC. The merge (summing `unit_qty`, averaging
+ * `unit_cost` by quantity) happens atomically in Postgres so two concurrent
+ * calls for the same material can't silently overwrite each other.
+ */
+export async function mergeOrCreateMaterial(params: {
+  projectId: string | null;
+  name: string;
+  quantity: number;
+  unitCost: number;
+  lowStockThreshold: number;
+}) {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc('merge_or_create_material', {
+    p_project_id: params.projectId,
+    p_name: params.name,
+    p_quantity: params.quantity,
+    p_unit_cost: params.unitCost,
+    p_low_stock_threshold: params.lowStockThreshold,
+  });
+
+  if (error) throw new Error(error.message);
+
+  return data;
+}
+
+/**
  * Function that record the log consumption of the materials
  */
 export async function logMaterialUsageAction(params: {
@@ -119,25 +148,15 @@ export async function createMaterialAction(params: {
   unitCost: number;
   lowStockThreshold: number;
 }) {
-  const orgId = await requireMaterialManager(params.orgId);
-  const adminSupabase = createAdminClient();
+  await requireMaterialManager(params.orgId);
 
-  await requireProjectInOrganization(adminSupabase, params.projectId, orgId);
-
-  const { data, error } = await adminSupabase
-    .from('materials')
-    .insert({
-      org_id: orgId,
-      name: params.name,
-      project_id: params.projectId || null,
-      unit_qty: params.quantity,
-      unit_cost: params.unitCost,
-      low_stock_threshold: params.lowStockThreshold,
-    })
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
+  const data = await mergeOrCreateMaterial({
+    projectId: params.projectId || null,
+    name: params.name,
+    quantity: params.quantity,
+    unitCost: params.unitCost,
+    lowStockThreshold: params.lowStockThreshold,
+  });
 
   revalidatePath(MATERIALS_MANAGEMENT.ROUTES.MATERIALS_PATH);
 
