@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Calendar, DollarSign, Pencil } from 'lucide-react';
+import { ProjectCostExportButton } from '@/components/projects/project-cost-export-button';
 import { ProjectFormDialog } from '@/components/projects/project-form-dialog';
 import { Button } from '@/components/ui/button';
 import { ProjectStatusBadge } from '@/components/projects/project-status-badge';
@@ -81,10 +82,16 @@ export function ProjectHeader({
           </div>
 
           {canManageProjects && (
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(true)}>
-              <Pencil className="h-4 w-4" />
-              {header.editButton}
-            </Button>
+            <div className="flex items-center gap-2">
+              <ProjectCostExportButton projectId={currentProject.id} />
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(true)}
+              >
+                <Pencil className="h-4 w-4" />
+                {header.editButton}
+              </Button>
+            </div>
           )}
         </div>
 

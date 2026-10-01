@@ -37,6 +37,8 @@ export const PROJECTS_MANAGEMENT = {
   },
   ROUTES: {
     PROJECTS_PATH: '/projects',
+    projectCostReportApi: (projectId: string) =>
+      `/api/projects/${projectId}/cost-report`,
   },
   MANAGER_ROLES: ['OWNER', 'FOREMAN'],
 } as const;
